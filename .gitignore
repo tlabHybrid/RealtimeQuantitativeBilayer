@@ -3,6 +3,11 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Log files
+OpenLipidBilayer/[Dd]ebug/
+OpenLipidBilayer/[Rr]elease/
+OpenLipidBilayer/log/
+
 # User-specific files
 *.rsuser
 *.suo
@@ -17,9 +22,11 @@
 mono_crash.*
 
 # Build results
-[Dd]ebug/
+[Dd]ebug/*.exe
+[Dd]ebug/*.ilk
+[Dd]ebug/*.pdb
 [Dd]ebugPublic/
-[Rr]elease/
+[Rr]elease/*.exe
 [Rr]eleases/
 x64/
 x86/
