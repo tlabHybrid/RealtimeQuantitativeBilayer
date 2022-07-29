@@ -26,8 +26,7 @@ void setup_per_channel_settings(TECELLA_HNDL h);
 void setup_stimulus(TECELLA_HNDL h);
 
 
-void acquire_start(TECELLA_HNDL h);		// Acquireを開始，別スレッドを立ててアンプからソフトウェアキューへデータの読み出し
-void acquire_stop(TECELLA_HNDL h);		// Acquire stop，スレッドを終了
-
-void acquire_without_callback(TECELLA_HNDL h, double* timestamp, double* destination);  // ソフトウェアキューから変数destinationへのデータの読み出し
-void acquire_with_callback(TECELLA_HNDL h, bool continuous);
+void acquire_start(TECELLA_HNDL h);		// [obsolete] should be deleted.
+void acquire_stop(TECELLA_HNDL h);		// Stop acquireing.
+void acquire_without_callback(TECELLA_HNDL h, double* timestamp, double* destination);  // Acquire current by blocking manner. (Tecella specific function)
+void acquire_with_callback(TECELLA_HNDL h, bool continuous);  // [obsolete] do not use.

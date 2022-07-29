@@ -1,13 +1,11 @@
 // TecellaAmpExample_00.cpp
-/*
-  TecellaAmp.libを利用して，PICOから嗅覚受容体の電流を取得する．(本体)
-*/
+// Uses TecellaAmp.lib to aqcuire curent from Tecella PICO amplifier.
 
 #include "TecellaAmpExample_00.h"
 #include "MyMain.h"
 
 /******************************************************************************
-* Main Function
+* Main Function  - Deleted (main() is already in main.cpp.  The content is transferred to measure_init() in Measurement.cpp)
 ******************************************************************************/
 /*
 int main(int argc, char** argv)
@@ -50,7 +48,7 @@ int main(int argc, char** argv)
 
 
 /******************************************************************************
-* Utility
+* Utility  - Deleted (Unused)
 ******************************************************************************/
 //This function sets the selected stimulus of the 4 additional channels.
 /*
@@ -77,7 +75,7 @@ void test_utility_set_stimulus(TECELLA_HNDL h)
 
 
 /******************************************************************************
-* Setup Gui
+* Setup Gui  - Modified (Almost the same as the bare TecellaAmp API)
 ******************************************************************************/
 //This function doesn't actually setup a GUI, but
 // it uses all the API functions that will help
@@ -168,7 +166,7 @@ void setup_gui(TECELLA_HNDL h)
 
 
 /******************************************************************************
-* Source and Gain
+* Source and Gain - Modified (fixing bugs.)
 ******************************************************************************/
 // This function simply sets up the source and gain
 // on a per-channel basis.
@@ -186,7 +184,7 @@ void setup_source_and_gain(TECELLA_HNDL h)
 	wprintf(L"\nSelecting source for channel %d to %s...\n", channel + 1, source_label);
 	tecella_chan_set_source(h, channel, source);
 
-	// バグけし．何故か何回かsourceを行ったり来たりしないとうまくHeadに切り替わらない．
+	// Somehow the source is not バグけし．何故か何回かsourceを行ったり来たりしないとうまくHeadに切り替わらない．
 	tecella_chan_set_source(h, 0, 0);
 	tecella_chan_set_source(h, 0, 1);
 	tecella_chan_set_source(h, 0, 2);
@@ -660,9 +658,6 @@ void acquire_with_callback(TECELLA_HNDL h, bool continuous)
 	wprintf(L"\tMain thread can do whatever it wants now, but be careful when sharing data with the callback thread.\n");
 
 	//let main thread do GUI stuff or whatever.
-	// MyMainのUIに投げる．
-	
-	
 	//in this case we'll just sleep.
 	int i = 0;
 	while (i < 20 || continuous)

@@ -2,6 +2,10 @@
 
 This repository contains the software for an article [HOGEHOGE](https://www.kikagaku.ai/).
 
+## What?
+In movie: 2022715_propaganda
+
+
 ## Currently dealing with
 - [x] github upload
 - [ ] Github modify
@@ -19,13 +23,15 @@ or a large-conductance ion channel (e.g. big pottasium channel).
 ## Installation
 
 ### Microsoft Visual Studio 2019
+https://visualstudio.microsoft.com/ja/
 
 
 ### Qt
+https://www.qt.io/ja-jp/download
 
 
 ### Tecella PICO and TecellaAmp API
-
+http://www.tecella.com/download.html
 
 
 
@@ -34,8 +40,11 @@ or a large-conductance ion channel (e.g. big pottasium channel).
 
 
 ### Software Setup
-* Qt setting
+* Qt setting in Visual Studio (project settings migi Qt setting)
+* project setting in VS 
+Project property linker system console
 * TecellaAmp modification
+* measurement modification
 
 
 
