@@ -10,6 +10,7 @@
 
 #include "MyMain.h"
 #include "Measurement.h"
+#include "MyHelper.h"
 #include "TecellaAmp.h"
 #include <math.h>
 #include <string>
@@ -17,8 +18,8 @@
 #include <iomanip>
 #include <iostream>
 #include <time.h>
+// <Qt/PrintSupport> is used in qcustomplot.cpp
 
-const int SAMPLE_FREQ = 5000;   // 5kHz sampling on Tecella PICO and KISTEC PocketAmpUSB
 
 MyMain::MyMain(QWidget *parent)
     : QWidget(parent)
@@ -31,6 +32,7 @@ MyMain::MyMain(QWidget *parent)
     ui.comboBox->addItem("s");
     ui.comboBox->addItem("ms");
     this->setup_mySerial();
+    this->data_from_local = true;
 
     this->display_Infos("**------**");
     ui.pushButton_2->setEnabled(false);

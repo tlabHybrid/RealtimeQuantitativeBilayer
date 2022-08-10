@@ -1,85 +1,19 @@
+/******************************************************************************
 // TecellaAmpExample_00.cpp
-// Uses TecellaAmp.lib to aqcuire curent from Tecella PICO amplifier.
+//
+// This code uses TecellaAmp.lib to aqcuire curent from Tecella PICO amplifier.
+//   Specific to Tecella amplifiers, so you need to replace this one if you need amplifiers of other manufacturers.
+// 
+// Modified from TecellaAmp API v1.6.3.
+******************************************************************************/
 
 #include "TecellaAmpExample_00.h"
-#include "MyMain.h"
-
-/******************************************************************************
-* Main Function  - Deleted (main() is already in main.cpp.  The content is transferred to measure_init() in Measurement.cpp)
-******************************************************************************/
-/*
-int main(int argc, char** argv)
-{
-	tecella_debug("tecella_debug.log");
-
-	//Initialize the device.
-	//Autodetect doesn't work yet, so you must explicitly specify the device model.
-	TECELLA_ERRNUM err;
-	TECELLA_HNDL h;
-	//if( err = tecella_initialize(&h, TECELLA_HW_MODEL_AUTO_DETECT) )	{
-	if (err = tecella_initialize(&h, TECELLA_HW_MODEL_AUTO_DETECT)) {
-		wprintf(tecella_error_message(err));
-		return 1;
-	}
-
-	//Determine what's supported and configure the GUI.
-	setup_gui(h);  wprintf(L"\nPress any key to continue.\n"); _getch();
-
-	//Utility functions
-	// Use only if your hardware supports this.
-	//test_utility_set_stimulus(h); wprintf(L"\nPress any key to continue.\n"); _getch();
-
-	//Change various settings of the device
-	setup_source_and_gain(h);  wprintf(L"\nPress any key to continue.\n"); _getch();
-	setup_auto_compensation(h);  wprintf(L"\nPress any key to continue.\n"); _getch();
-	setup_per_channel_settings(h);  wprintf(L"\nPress any key to continue.\n"); _getch();
-	setup_stimulus(h);  wprintf(L"\nPress any key to continue.\n"); _getch();
-	//Acquire using different methods
-	acquire_without_callback(h, false);  wprintf(L"\nPress any key to continue.\n"); _getch();
-	acquire_with_callback(h, false);  wprintf(L"\nPress any key to continue.\n"); _getch();
-	acquire_without_callback(h, true);  wprintf(L"\nPress any key to continue.\n"); _getch();
-	acquire_with_callback(h, true);  wprintf(L"\nPress any key to continue.\n"); _getch();
-
-	//Clean up and exit.
-	tecella_finalize(h);
-	return 0;
-}
-*/
 
 
 /******************************************************************************
-* Utility  - Deleted (Unused)
+* Setup Gui  - Almost the same as the raw TecellaAmp API
 ******************************************************************************/
-//This function sets the selected stimulus of the 4 additional channels.
-/*
-void test_utility_set_stimulus(TECELLA_HNDL h)
-{
-	wprintf(L"\nApplying -200mV, -100mV, 100mV, 200mV to the first four utility channels respectively.\n");
-	tecella_stimulus_set_hold(h, -200e-3, 0);
-	tecella_stimulus_set_hold(h, -100e-3, 1);
-	tecella_stimulus_set_hold(h, 100e-3, 2);
-	tecella_stimulus_set_hold(h, 200e-3, 3);
-
-	tecella_utility_set_stimulus(h, 0, 0);
-	tecella_utility_set_stimulus(h, 1, 1);
-	tecella_utility_set_stimulus(h, 2, 2);
-	tecella_utility_set_stimulus(h, 3, 3);
-
-	wprintf(L"Applying -200mV, -100mV, 100mV, 200mV to the first four regular channels respectively.\n");
-	tecella_chan_set_stimulus(h, 0, 0);
-	tecella_chan_set_stimulus(h, 1, 1);
-	tecella_chan_set_stimulus(h, 2, 2);
-	tecella_chan_set_stimulus(h, 3, 3);
-}
-*/
-
-
-/******************************************************************************
-* Setup Gui  - Modified (Almost the same as the bare TecellaAmp API)
-******************************************************************************/
-//This function doesn't actually setup a GUI, but
-// it uses all the API functions that will help
-// a GUI determine what features are supported and
+// This function displays what features are supported and
 // what valid values are for certain settings.
 //
 void setup_gui(TECELLA_HNDL h)
@@ -178,13 +112,13 @@ void setup_source_and_gain(TECELLA_HNDL h)
 
 	// [None, Head, VModel]
 	int channel = 0;
-	int source = 1; //rand() % hw_props.nsources;
+	int source = 1;
 	const wchar_t* source_label;
 	tecella_get_source_label(h, source, &source_label);
 	wprintf(L"\nSelecting source for channel %d to %s...\n", channel + 1, source_label);
 	tecella_chan_set_source(h, channel, source);
 
-	// Somehow the source is not バグけし．何故か何回かsourceを行ったり来たりしないとうまくHeadに切り替わらない．
+	// Bug fix.  Somehow, the source won't change to Head unless we forcefully and randomly switch them several times.
 	tecella_chan_set_source(h, 0, 0);
 	tecella_chan_set_source(h, 0, 1);
 	tecella_chan_set_source(h, 0, 2);
@@ -192,12 +126,13 @@ void setup_source_and_gain(TECELLA_HNDL h)
 
 
 	// [10M, 100M, 1G, 3.3G, 10G]
-	int gain = 2; // rand() % hw_props.ngains;
+	int gain = 2;
 	const wchar_t* gain_label;
 	tecella_get_gain_label(h, gain, &gain_label);
 	wprintf(L"\nSelecting gain for channel %d to %s...\n", channel + 1, gain_label);
 	tecella_chan_set_gain(h, channel, gain);
 
+	// Bug fix.  Somehow, the gain won't change to 1G unless we forcefully and randomly switch them several times.
 	tecella_chan_set_gain(h, 0, 1);
 	tecella_chan_set_gain(h, 0, 2);
 	tecella_chan_set_gain(h, 0, 3);
@@ -209,7 +144,7 @@ void setup_source_and_gain(TECELLA_HNDL h)
 
 
 /******************************************************************************
-* Auto Compensation
+* Auto Compensation - Modified (added compensation functions.)
 ******************************************************************************/
 // Auto offset zeroes out the graph.
 // Auto compensation sets Leak, Cfast, and the Cslows to remove any
@@ -279,7 +214,9 @@ void setup_auto_compensation(TECELLA_HNDL h)
 	//wprintf(L"\nRunning Auto Artifact Removal...\n");
 	//tecella_auto_artifact_update(h);
 
-	// バグけし．Offsetはうまくいかないことが多いので，5mV位に手動で補正する
+
+	// Bug fix.  Somehow, the offset values are not well set by the auto_comp functions. 
+	// Manually set the value to 5 mV.
 	tecella_get_reg_props(h, TECELLA_REG_JP, &reg_props);
 	if (reg_props.supported) {
 		tecella_chan_set(h, TECELLA_REG_JP, channel, 6.0);
@@ -296,7 +233,7 @@ void setup_auto_compensation(TECELLA_HNDL h)
 
 
 /******************************************************************************
-* Per-channel settings
+* Per-channel settings - Modified (predetermined the Bessel cutoff frequency to 1 kHz.)
 ******************************************************************************/
 // This function shows how to set any of the registers from TECELLA_REGISTER.
 // Note that proper units should be used.
@@ -313,7 +250,6 @@ void setup_per_channel_settings(TECELLA_HNDL h)
 
 	//Autocomp already set up leak, cfast, and the cslows
 	// so lets change some other settings.
-
 	int ivalue;
 	double dvalue;
 	TECELLA_REG_PROPS reg_props;
@@ -336,52 +272,11 @@ void setup_per_channel_settings(TECELLA_HNDL h)
 	else {
 		tecella_chan_set(h, TECELLA_REG_RSERIES, TECELLA_ALLCHAN, reg_props.v_min);
 	}
-
-	/*
-	//Set a register to a random valid value (with proper precision.)
-	//This method should result in a value that doesn't get rounded
-	// to a different value when it's programmed in hardware.
-	tecella_get_reg_props(h, TECELLA_REG_JP, &reg_props);
-	if (reg_props.supported)
-	{
-		wprintf(L"Setting %s to a random valid value WITH proper precision:\n", reg_props.label);
-		for (int channel = 0; channel < hw_props.nchans; ++channel)
-		{
-			//uses lsb:
-			dvalue = reg_props.v_min +
-				reg_props.v_lsb * (rand() % reg_props.v_divisions);
-			tecella_chan_set(h, TECELLA_REG_JP, channel, dvalue);
-			wprintf(L"\tWrite %s of channel %d --> %lf\n", reg_props.label, channel, dvalue);
-
-			tecella_chan_get(h, TECELLA_REG_JP, channel, &dvalue);
-			wprintf(L"\tRead  %s of channel %d --> %lf\n", reg_props.label, channel, dvalue);
-		}
-	}
-
-	//Set a register to a random valid value (without proper precision.)
-	//The actual value may vary once it's programmed in the hardware
-	tecella_get_reg_props(h, TECELLA_REG_JP, &reg_props);
-	if (reg_props.supported)
-	{
-		wprintf(L"Setting %s to a random valid value WITHOUT proper precision:\n", reg_props.label);
-		for (int channel = 0; channel < hw_props.nchans; ++channel)
-		{
-			//doesn't use lsb:
-			dvalue = reg_props.v_min +
-				(reg_props.v_max - reg_props.v_min) * rand() / RAND_MAX;
-			tecella_chan_set(h, TECELLA_REG_JP, channel, dvalue);
-			wprintf(L"\tWrite %s of channel %d --> %lf\n", reg_props.label, channel, dvalue);
-
-			tecella_chan_get(h, TECELLA_REG_JP, channel, &dvalue);
-			wprintf(L"\tRead  %s of channel %d --> %lf\n", reg_props.label, channel, dvalue);
-		}
-	}
-	*/
 }
 
 
 /******************************************************************************
-* Stimulus
+* Stimulus  - Modified (set the hold stimulus value to 50 mV.)
 ******************************************************************************/
 // This function shows how to program the stimulus for both
 // single stimulus systems and multi stimulus systems.
@@ -392,31 +287,20 @@ void setup_stimulus(TECELLA_HNDL h)
 
 	wprintf(L"\nSetting up the stimuli...\n");
 
-	// vcmdを有効にしないと強制的に0Vになってしまうらしい
 	int channel = 0; 
-	//bool isenable;
-	//tecella_chan_get_vcmd_enable(h, channel, &isenable);
-	//if(!isenable) tecella_chan_set_vcmd_enable(h, channel, true);
-
-	// 50mVでホールドするだけでよい．
 	double voltage = 50e-3;
 	tecella_stimulus_set_hold(h, voltage);
 	
-
 	//wprintf(L"\nSetting up the software filter...\n");
-	//あと，sampling周期を5kHzにしたい (multiplierをx8にする) ので，以下のコマンドが必要？
-	//必要そうでなければ消すこと．
 	//tecella_sw_filter_enable(h, true);
 	//tecella_sw_filter_auto_downsample(h, true);
 	
-	
-	// 旧TecellaAmpExample00.cppと同じにするため，再度復帰
 	//Create a stimulus
 	const int SEGMENT_COUNT = 3;
 	TECELLA_STIMULUS_SEGMENT stimulus[SEGMENT_COUNT] = {
-		{TECELLA_STIMULUS_SEGMENT_SET, 50e-3, 0, 250e-3, 0},   //0 milliVolts, 250ms (.25 seconds)
-		{TECELLA_STIMULUS_SEGMENT_SET, 50e-3, 0, 500e-3, 0},   //0 milliVolts, 500ms (.5 seconds)
-		{TECELLA_STIMULUS_SEGMENT_SET, 50e-3, 0, 250e-3, 0},   //0 milliVolts, 250ms (.25 seconds)
+		{TECELLA_STIMULUS_SEGMENT_SET, 50e-3, 0, 250e-3, 0},   //50 milliVolts, 250ms (.25 seconds)
+		{TECELLA_STIMULUS_SEGMENT_SET, 50e-3, 0, 500e-3, 0},   //50 milliVolts, 500ms (.5 seconds)
+		{TECELLA_STIMULUS_SEGMENT_SET, 50e-3, 0, 250e-3, 0},   //50 milliVolts, 250ms (.25 seconds)
 	};
 
 	//Program all available stimuli
@@ -435,45 +319,22 @@ void setup_stimulus(TECELLA_HNDL h)
 		//make it such that the stimulus are different.
 		stimulus[1].value += 10e-3;
 	}
-
-	
-
-	
-}
-
-
-
-/******************************************************************************
-* Acquire start - Modified
-******************************************************************************/
-void acquire_start(TECELLA_HNDL h) {
-	//以下， tecella_acquire_start()についてTecellaAmp.hからコピー
-	/** Sets up an acquisition and returns once the acquisition has begun.
-	When the function returns, an internal thread runs asynchronously that constantly pulls data from the device and pushes it into the internal queue.
-	@param h A handle to an initialized device.
-	@param sample_period_multiplier The actual sample period used will be sample_period_min times sample_peiriod_multiplier.
-	@param continuous If true, acquisition continues until tecella_acquire_stop() is called.  If false, acquisition continues for as long as the longest programmed stimulus or until tecella_acquire_stop() is called.
-	@param start_stimuli If true, all stimuli start playing at the start of acquisition and also capture continuously if continuous_stimuli is ture.  To use different options for different stimuli set both continuous_stimuli and start_stimuli to false and call tecella_acquire_start_stimulus() for each stimulus before calling tecella_acquire_start().
-	@param continuous_stimuli Valid only if continuous is true.  If true, all stimuli will capture continuously and also start playing if start_stimuli is true.  To use different options for different stimuli set both continuous_stimuli and start_stimuli to false and call tecella_acquire_start_stimulus() for each stimulus before calling tecella_acquire_start().
-	@param start_on_trigger If true, acquisition will not start until an external hardware trigger is detected.
-	*/
-
 }
 
 
 /******************************************************************************
-* Acquire stop - Modified
+* Acquire function
+* Acquire WITHOUT Callback  - Modified
+    * Added the arguments (pointers for data returning)
+    * Deleted the file export functions
+	* Change the constant values to enable 5 kHz sampling.
+	    * sample_period_multiplier = 8
+		* buffer_size = 1250
+		* acquisition loop num = 4
+    * Bug fix: changed the scale value after tecella_acquire_i2d_scale() to 1e12. (It was 1e9 in the raw API, but I guess pico = 1e-12.)
 ******************************************************************************/
-void acquire_stop(TECELLA_HNDL h) {
-	// acquireを止める．スレッドが終了する．
-	tecella_acquire_stop(h);
-	wprintf(L"\tAcquisition stopped.\n");
-}
-
-
-/******************************************************************************
-* Acquire WITHOUT Callback - Modified
-******************************************************************************/
+// This function acquires the digitized current value from the amplifier
+// and return the value to the specified pointer.
 void acquire_without_callback(TECELLA_HNDL h, double* timestamp_arg, double* destination_arg)
 {
 	TECELLA_HW_PROPS hw_props;
@@ -486,17 +347,11 @@ void acquire_without_callback(TECELLA_HNDL h, double* timestamp_arg, double* des
 	tecella_stimulus_set_callback(h, 0);
 	tecella_acquire_set_callback(h, 0);
 
-	//Open a text file to ouput the samples to
-	//FILE* fp = 0;
-	//fp = fopen("capture.txt", "w");
-	//fprintf(fp, "timestamp, pA\n");
-
 	//start acquisition
 	wprintf(L"\tStarting acquisition.\n");
 	int sample_period_multiplier = 8;
 	tecella_acquire_start(h, sample_period_multiplier, false); 
 	wprintf(L"\tAcquisition thread started, main thread will now read data as it is acquired.\n");
-
 
 	//read the data for each channel one at a time.
 	int channel = 0;
@@ -509,8 +364,8 @@ void acquire_without_callback(TECELLA_HNDL h, double* timestamp_arg, double* des
 	int idx = 0;
 	while (more_samples_left)
 	{
-		//stop the acquisition if the 5000> samples are collected.
-		//the loop will continue until there are no more samples.
+		// Stop the acquisition if the 5000> samples are collected.
+		// the loop will continue until there are no more samples.
 		idx++;
 		if (idx >= 5) {
 			tecella_acquire_stop(h);
@@ -526,155 +381,27 @@ void acquire_without_callback(TECELLA_HNDL h, double* timestamp_arg, double* des
 			more_samples_left = false;
 		}
 
-		//output samples
-		//output samples to a file if not in continuous mode
-		//  and it's the first channel
-		//if (fp && channel == 0)
-		//{
+		//output samples to the destination pointers
 		if (idx <= 4) {
 			double scale;
 			tecella_acquire_i2d_scale(h, channel, &scale);
-			scale *= 1e12;   //convert scale from amps to picoamps   .... ...  ... .. . . . .  pAって10^-12では！！！！？？？？
+			scale *= 1e12;   // convert scale from amps to picoamps
 			for (unsigned int i = 0; i < samples_returned; ++i) {
-				//fprintf(fp, "%llu, %lf\n", timestamp, scale * samples[i]);
-				// destination = samples に代入する処理をここに書く
 				timestamp_arg[(idx - 1) * buffer_size + i] = double(timestamp + i);
 				destination_arg[(idx - 1) * buffer_size + i] = scale * samples[i];
 			}
-		}
-		//}
-			
+		}	
 		wprintf(L"\tAcquired %d samples from all channels. \n", samples_returned);
-
 	}
-		
 	tecella_acquire_stop(h);
-
-	//if (fp) { fclose(fp); }
-
-	
-
 	wprintf(L"\tAcquisition complete.\n");
 }
 
 
-
 /******************************************************************************
-* The Stimulus Callback Function
+* Acquire stop
 ******************************************************************************/
-//the stimulus callback function runs in a separate thread
-// independent of the acquisition thread and the main thread
-// but in the same thread as the acquire callback
-void stimulus_callback_function(TECELLA_HNDL h, int stimulus_index, unsigned long long timestamp)
-{
-	//wprintf(L"\n\tWe have been notified that stimulus #%d started at timestamp %d", stimulus_index, timestamp);
-}
-
-/******************************************************************************
-* The Acquisition Callback Function
-******************************************************************************/
-//the acquisition callback function runs in a separate thread
-// independent of the acquisition thread and the main thread
-// but in the same thread as the stimulus callback
-void acquire_callback_function(TECELLA_HNDL h, int channel, unsigned int sample_count)
-{
-	const unsigned int buffer_size = 1024;
-	short samples[buffer_size];
-	unsigned int samples_requested = 0;
-	unsigned int samples_returned = 0;
-
-	if (channel == 0) {
-		wprintf(L"\n\tAcquiring %d samples from channel %d", sample_count, channel);
-	}
-	else {
-		wprintf(L",%d", channel);
-	}
-
-	while (sample_count > 0)
-	{
-		if (buffer_size < sample_count) {
-			samples_requested = buffer_size;
-		}
-		else {
-			samples_requested = sample_count;
-		}
-
-		unsigned long long timestamp;
-		bool last_sample_flag;
-		tecella_acquire_read_i(h, channel, samples_requested, samples, &samples_returned, &timestamp, &last_sample_flag);
-
-		//wprintf(L"(samples_left=%d,t=%d,len=%d)", sample_count, timestamp, samples_returned);
-		if (last_sample_flag) {
-			wprintf(L"\nLast sample received. (Means stimulus or acquisition has ended.)");
-			//do any cleanup for the current stimulus
-			// and any setup for the next stimulus (if any)
-		}
-
-		//store samples somewhere in a thread-safe way
-		double scale;
-		tecella_acquire_i2d_scale(h, channel, &scale);
-		double first_sample_in_amps = scale * samples[0];
-
-
-		FILE* fp = 0;
-		fopen_s(&fp, "capture.txt", "w"); // upgrade
-		if (fp) {
-			for (unsigned int i = 0; i < samples_returned; ++i) {
-				fprintf(fp, "%llu, %lf\n", timestamp, scale * samples[i]);
-			}
-			fclose(fp);
-		}
-		
-
-		if (samples_returned == 0) {
-			sample_count = 0;
-			wprintf(L"\nSomething is wrong.  This should never happen.");
-		}
-		else {
-			sample_count -= samples_returned;
-		}
-	}
-}
-
-/******************************************************************************
-* Acquire WITH Callback
-******************************************************************************/
-void acquire_with_callback(TECELLA_HNDL h, bool continuous)
-{
-	wprintf(L"\nRunning acquisition WITH a callback in %s mode.\n", continuous ? L"Continuous" : L"Single Shot");
-
-	//Sets the API's internal buffer to hold up to 2 seconds worth of data per channel.
-	tecella_acquire_set_buffer_size(h, 20000 * 2);
-
-	//Set the callback functions
-	tecella_stimulus_set_callback(h, stimulus_callback_function);
-	tecella_acquire_set_callback(h, acquire_callback_function);
-
-	//start acquisition
-	wprintf(L"\tStarting acquisition.\n");
-	int sample_period_multiplier = 1;
-	tecella_acquire_start(h, sample_period_multiplier, continuous);
-	wprintf(L"\tAcquisition thread started and callback thread started.\n");
-	wprintf(L"\tMain thread can do whatever it wants now, but be careful when sharing data with the callback thread.\n");
-
-	//let main thread do GUI stuff or whatever.
-	//in this case we'll just sleep.
-	int i = 0;
-	while (i < 20 || continuous)
-	{
-		Sleep(63);
-		wprintf(L"\nMain thread slept for 63ms.  Press any key to stop acquire.");
-
-		//if a button is pressed stop the acquisition.
-		if (_kbhit()) {
-			_getch();
-			tecella_acquire_stop(h);
-			wprintf(L"\nStopping acquisition.\n");
-			Sleep(63);
-			break;
-		}
-
-		++i;
-	}
-	
+void acquire_stop(TECELLA_HNDL h) {
+	tecella_acquire_stop(h);
+	wprintf(L"\tAcquisition stopped.\n");
 }

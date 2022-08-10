@@ -1,11 +1,10 @@
 
-
 #include "Measurement.h"
 #include "MyMain.h"
 #include "TecellaAmp.h"
 #include "TecellaAmpExample_00.h"
 
-
+TECELLA_HNDL aaa;
 
 // 計測器と接続・設定の初期化を行う
 int measure_init(MyMain* m, int choice) {
@@ -52,10 +51,6 @@ int measure_init(MyMain* m, int choice) {
 	return 0;
 }
 
-//計測を開始する (acquire開始：アンプ→ソフトウェアキュー蓄積)
-void measure_start(MyMain* m) {
-	acquire_start(m->h);
-}
 
 
 // 計測を実行する (readする：ソフトウェアキュー→適当な変数destination)

@@ -65,5 +65,8 @@
     <ClInclude Include="TecellaAmpExample_00.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MyHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

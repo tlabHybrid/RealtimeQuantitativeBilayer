@@ -112,6 +112,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Measurement.h" />
+    <ClInclude Include="MyHelper.h" />
     <ClInclude Include="TecellaAmp.h" />
     <ClInclude Include="TecellaAmpExample_00.h" />
   </ItemGroup>

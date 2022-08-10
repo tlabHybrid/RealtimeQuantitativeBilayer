@@ -16,7 +16,7 @@ public:
     MyMain(QWidget *parent = Q_NULLPTR);
     ~MyMain();
     void display_Infos(const char*);
-    TECELLA_HNDL h;   // Amplifier handle variable.
+    TECELLA_HNDL h;   // Amplifier handle variable. 
 
 private:
     Ui::MyMainClass ui;
