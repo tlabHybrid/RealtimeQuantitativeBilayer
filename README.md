@@ -22,11 +22,11 @@ Bila-kit is a toolkit for lipid bilayer researchers, providing them with the in-
 The following software/libraries/packages and hardware are required for Bila-kit to properly function. If you don't have any of these, install them before using Bila-kit.
 
 ### Microsoft Visual Studio
-* Download and install the IDE from [the official homepage] (https://visualstudio.microsoft.com/ja/vs/).
+* Download and install the IDE from [the official homepage](https://visualstudio.microsoft.com/ja/vs/).
   * Bila-kit is developed by Visual Studio Community 2019.
 
 ### Qt
-* Download and install the package from [the official homepage] (https://www.qt.io/ja-jp/download-open-source).
+* Download and install the package from [the official homepage](https://www.qt.io/ja-jp/download-open-source).
   * Bila-kit uses Qt 5.15.2 (MSVC 2019 32-bit) in the open-source edition.
 
 ### Connecting Qt to Visual Studio
@@ -42,7 +42,7 @@ Although you can futuristically incorporate any lipid bilayer amplifiers from an
 [NOTE] The purpose to use API/DLLs is to acquire the digitized current in-situ and on-line, not after experiments. Therefore, if you find other manufacturer's API/DLLs more suitable or discover other way to acquire the digitized current in-situ and on-line, you can replace them with Tecella amplifier and API/DLLs in this paper. 
 
 * Obtain a Tecella amplifier.
-  * Bila-kit uses [PICO] (http://www.tecella.com/pico.html).
+  * Bila-kit uses [PICO](http://www.tecella.com/pico.html).
   * Install necessary drivers by the manufacturer's instructions.
 
 ### Arduino and stepper motors
@@ -58,7 +58,7 @@ You can use your preferable microcomputers for driving peripheral devices (such 
 # Usage
 
 ## Setup the hardware connection
-![The image] (Assets/capture.PNG)
+![The image](/Assets/capture.PNG)
 
 ## Setup the lipid bilayer environment
 * Rotating device is on the paper
