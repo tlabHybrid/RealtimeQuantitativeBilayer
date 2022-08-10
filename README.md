@@ -39,7 +39,7 @@ The following software/libraries/packages and hardware are required for Bila-kit
 ### Tecella amplifier and TecellaAmp API/DLLs
 Although you can futuristically incorporate any lipid bilayer amplifiers from any manufacturers to Bila-kit, it currently integrated with only Tecella amplifiers and corresponding public API/DLLs.
 
-[NOTE] The purpose to use API/DLLs is to acquire the digitized current in-situ and on-line, not after experiments. Therefore, if you find other manufacturer's API/DLLs more suitable or discover other way to acquire the digitized current in-situ and on-line, you can replace them with Tecella amplifier and API/DLLs in this paper. 
+[NOTE] The purpose to use API/DLLs is to acquire the digitized current in-situ and on-line, not after experiments. Therefore, **if you find other manufacturer's API/DLLs more suitable or discover other way to acquire the digitized current in-situ and on-line, you can replace them with Tecella amplifier and API/DLLs in this paper**. 
 
 * Obtain a Tecella amplifier.
   * Bila-kit uses [PICO](http://www.tecella.com/pico.html).
@@ -48,8 +48,8 @@ Although you can futuristically incorporate any lipid bilayer amplifiers from an
 ### Arduino and stepper motors
 You can use your preferable microcomputers for driving peripheral devices (such as stepper motors). Just for example, we use Arduino MEGA. 
 
-* Obtain Arduino MEGA.
-  * Bila-kit uses Arduino Mega 2560 R3. 
+* Obtain a microcomputer and a stepper motor.
+  * Bila-kit uses Arduino Mega 2560 R3 and 28BYJ-48 (with ULN2003 motor driver), respectively.
 
 ## Download this repository
 * Download this repository to your preferable working directory.
@@ -57,23 +57,59 @@ You can use your preferable microcomputers for driving peripheral devices (such 
 
 # Usage
 
-## Setup the hardware connection
-![The image](/Assets/capture.PNG)
+## Setup the hardware
+![Device image](/Assets/device.PNG)
 
-## Setup the lipid bilayer environment
-* Rotating device is on the paper
+### Amplifier
+* Connect the amplifier with your PC.
+
+### Arduino and a stepper motor
+* Connect the Arduino MEGA with your PC.
+* Connect the stepper motor to the driver.
+* Connect the motor driver to Arduino MEGA.
+  * In Bila-kit, 9 ~ 12 pins of Arduino are connected to the motor driver.
+* Power the motor driver with a 9V battery.
+  * We recommend not to use a socket to power the motor to reduce the effect of electromagnetical noise.
+* If needed, you can use a housing of a stepper motor.
+  * In Bila-kit, we used [a publicly available housing for 28BYJ-48 & ULN2003](https://www.thingiverse.com/thing:5145361)
+
+### Lipid bilayer environment
+Lipid bilayers can be created in many ways. In this paper, we used [Droplet Contact Method](https://www.nature.com/articles/srep01995), which utilizes a perforated separator to stabilize the lipid bilayer while maintaining ease of operation.
+
+The rotatable device in Bila-kit is already described in the paper. Here, we just overview the experimental procedure.
+
+* Construct the lipid bilayer chamber with an appropriate surface coating and electrical wirings.
+* Install the rotation table onto a shaft of the stepper motor.
+* Infuse lipid-oil mixture into the chamber.
+* Infuse electrolyte solution with membrane proteins into the chamber.
 
 ## Run the application
-* Setup
-* Acquire
-* Stop
+Here is the procedure to run the Bila-kit application.
+
+### Setup
+* Build and run the application in Visual Studio.
+* Rotate the lipid bilayer chamber with the "rotation" button to the correct position.
+* Cover the whole system with Faraday Cage.
+* Select "Amplifier" as the data source.
+* Press "Setup" button and wait until the connection and calibration is finished.
+
+### Acquire
+* Select the appropriate protein as the protein type.
+* Enter the appropriate conductance and bias membrane voltage.
+* Select the appropriate postprocessing method.
+* Press "Acquire" button to start the acquisition.
+  * The graph is automatically scrolls.
+  * Every second, the raw current value, the idealized data, the post processed data (open probability, estimated stimuli, etc.) are exported to CSV files in "log" directory.
+
+### Stop
+* If you want to terminate the software, press "Stop" button before killing the process for graceful termination.
 
 ## Analysis
-* already in the log/ folder.
-* open CSV and create histogram.
+* The postprocessed data is already exported in "log" folder.
+* You can use them to easily create your own reports.
 
 
-# Modification
+# About a liscence
 Bila-kit is open-source except some API/DLLs, so you can freely modify this application to meet your demands. Although not obligatory, we would really appreciate if you cite the following paper.
 
 [HOGE]
