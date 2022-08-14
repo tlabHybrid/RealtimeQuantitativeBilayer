@@ -43,10 +43,19 @@
     <ClCompile Include="qcustomplot.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Measurement.cpp">
+    <ClCompile Include="SenseAmplifier.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TecellaAmpExample_00.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SenseLocal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="qcustomserial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ActuationSerial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -56,9 +65,6 @@
     </QtMoc>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Measurement.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="TecellaAmp.h">
       <Filter>Header Files</Filter>
     </ClInclude>

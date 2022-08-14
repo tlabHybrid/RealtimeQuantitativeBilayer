@@ -98,8 +98,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Measurement.cpp" />
+    <ClCompile Include="ActuationSerial.cpp" />
+    <ClCompile Include="qcustomserial.cpp" />
+    <ClCompile Include="SenseAmplifier.cpp" />
     <ClCompile Include="qcustomplot.cpp" />
+    <ClCompile Include="SenseLocal.cpp" />
     <ClCompile Include="TecellaAmpExample_00.cpp" />
     <QtRcc Include="MyMain.qrc" />
     <QtUic Include="MyMain.ui" />
@@ -111,7 +114,6 @@
     <QtMoc Include="qcustomplot.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Measurement.h" />
     <ClInclude Include="MyHelper.h" />
     <ClInclude Include="TecellaAmp.h" />
     <ClInclude Include="TecellaAmpExample_00.h" />
