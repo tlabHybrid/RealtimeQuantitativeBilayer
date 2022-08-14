@@ -4,9 +4,9 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # Log files
-OpenLipidBilayer/[Dd]ebug/
-OpenLipidBilayer/[Rr]elease/
-OpenLipidBilayer/log/
+Bila-kit/[Dd]ebug/
+Bila-kit/[Rr]elease/
+Bila-kit/log/
 
 # User-specific files
 *.rsuser

@@ -109,7 +109,14 @@ Here is the procedure to run the Bila-kit application.
 * You can use them to easily create your own reports.
 
 
-# About a liscence
+# Deploy
+If you want to use Bila-kit without Visual Studio (e.g. other user's PC), deployment is possible by using the files in Bila-kit/deploy/.
+* First, you need to make a Release build.
+* From Release/, copy the exe file into Bila-kit/deploy/.
+* Now check that the file can be executed.
+
+
+# About a licence
 Bila-kit is open-source except some API/DLLs, so you can freely modify this application to meet your demands. Although not obligatory, we would really appreciate if you cite the following paper.
 
 [HOGE]
