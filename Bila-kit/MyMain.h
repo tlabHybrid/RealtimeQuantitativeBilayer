@@ -2,6 +2,7 @@
 
 #include <QtWidgets/QWidget>
 #include "ui_MyMain.h"
+#include "subWin.h"
 
 class MyMain : public QWidget
 {
@@ -25,6 +26,9 @@ private:
     std::string myFileName_processed;
     std::string myFileName_postprocessed;
 
+    // Second window
+    subWin* subWindow;
+
 private slots:
     // Push buttons
     void on_pushBtnClicked();
@@ -33,6 +37,8 @@ private slots:
     void on_pushBtn4Clicked();
     void on_pushBtn5Clicked();
     void on_pushBtn6Clicked();
+    void on_pushBtn7Clicked();
+    void on_spinBoxChanged(int value);
 
     // Main function (1 Hz callback)
     void update_graph_1Hz();

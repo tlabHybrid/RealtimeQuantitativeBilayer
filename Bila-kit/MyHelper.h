@@ -9,6 +9,7 @@ int setupAmplifier(int choice);
 void readAmplifier(double* timestamp, double* destination, int dataIndex_loop_num);
 void stopAmplifier();
 int finalizeAmplifier();
+void changeVoltageAmplifier(int value);
 // SenseLocal.cpp // 
 int setupLocal(MyMain* mainwindow, int extension, bool isSeconds, double* dataStartTime);
 int readLocal(double* timestamp, double* destination, int dataIndex_loop_num);

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1280</width>
+    <width>1281</width>
     <height>720</height>
    </rect>
   </property>
@@ -505,7 +505,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>670</x>
      <y>100</y>
-     <width>471</width>
+     <width>381</width>
      <height>21</height>
     </rect>
    </property>
@@ -524,7 +524,7 @@ p, li { white-space: pre-wrap; }
   <widget class="QPushButton" name="pushButton_4">
    <property name="geometry">
     <rect>
-     <x>1160</x>
+     <x>1120</x>
      <y>100</y>
      <width>31</width>
      <height>28</height>
@@ -542,7 +542,7 @@ p, li { white-space: pre-wrap; }
   <widget class="QPushButton" name="pushButton_5">
    <property name="geometry">
     <rect>
-     <x>1200</x>
+     <x>1160</x>
      <y>100</y>
      <width>31</width>
      <height>28</height>
@@ -560,7 +560,7 @@ p, li { white-space: pre-wrap; }
   <widget class="QPushButton" name="pushButton_6">
    <property name="geometry">
     <rect>
-     <x>1240</x>
+     <x>1200</x>
      <y>100</y>
      <width>31</width>
      <height>28</height>
@@ -580,7 +580,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>670</x>
      <y>130</y>
-     <width>471</width>
+     <width>381</width>
      <height>21</height>
     </rect>
    </property>
@@ -628,10 +628,10 @@ p, li { white-space: pre-wrap; }
      </font>
     </property>
     <property name="text">
-     <string>Thres. Emphasis</string>
+     <string>Cond. Histogram</string>
     </property>
     <property name="checked">
-     <bool>true</bool>
+     <bool>false</bool>
     </property>
    </widget>
    <widget class="QRadioButton" name="radioButton_14">
@@ -649,10 +649,10 @@ p, li { white-space: pre-wrap; }
      </font>
     </property>
     <property name="text">
-     <string>Cond. Histogram</string>
+     <string>Thres. Emphasis</string>
     </property>
     <property name="checked">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
    </widget>
    <widget class="QRadioButton" name="radioButton_15">
@@ -682,7 +682,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>670</x>
      <y>160</y>
-     <width>471</width>
+     <width>381</width>
      <height>21</height>
     </rect>
    </property>
@@ -701,9 +701,9 @@ p, li { white-space: pre-wrap; }
   <widget class="QSpinBox" name="spinBox">
    <property name="geometry">
     <rect>
-     <x>1160</x>
+     <x>1120</x>
      <y>150</y>
-     <width>111</width>
+     <width>151</width>
      <height>31</height>
     </rect>
    </property>
@@ -711,6 +711,12 @@ p, li { white-space: pre-wrap; }
     <font>
      <pointsize>16</pointsize>
     </font>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+   <property name="keyboardTracking">
+    <bool>false</bool>
    </property>
   </widget>
   <widget class="QTextBrowser" name="textBrowser_11">
@@ -737,6 +743,24 @@ p, li { white-space: pre-wrap; }
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'HGPｺﾞｼｯｸM'; font-size:18pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;mV&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_7">
+   <property name="geometry">
+    <rect>
+     <x>1240</x>
+     <y>100</y>
+     <width>31</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>13</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string/>
    </property>
   </widget>
   <zorder>textBrowser_11</zorder>
@@ -766,6 +790,7 @@ p, li { white-space: pre-wrap; }
   <zorder>groupBox_3</zorder>
   <zorder>checkBox_3</zorder>
   <zorder>spinBox</zorder>
+  <zorder>pushButton_7</zorder>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -876,6 +901,38 @@ p, li { white-space: pre-wrap; }
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>spinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>MyMainClass</receiver>
+   <slot>on_spinBoxChanged(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1198</x>
+     <y>172</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1198</x>
+     <y>194</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_7</sender>
+   <signal>clicked()</signal>
+   <receiver>MyMainClass</receiver>
+   <slot>on_pushBtn7Clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1127</x>
+     <y>118</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1113</x>
+     <y>121</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>on_pushBtnClicked()</slot>
@@ -884,5 +941,7 @@ p, li { white-space: pre-wrap; }
   <slot>on_pushBtn4Clicked()</slot>
   <slot>on_pushBtn5Clicked()</slot>
   <slot>on_pushBtn6Clicked()</slot>
+  <slot>on_pushBtn7Clicked()</slot>
+  <slot>on_spinBoxChanged(int)</slot>
  </slots>
 </ui>

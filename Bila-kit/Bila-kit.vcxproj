@@ -104,18 +104,21 @@
     <ClCompile Include="SenseAmplifier.cpp" />
     <ClCompile Include="qcustomplot.cpp" />
     <ClCompile Include="SenseLocal.cpp" />
+    <ClCompile Include="subWin.cpp" />
     <ClCompile Include="TecellaAmpExample_00.cpp" />
     <QtRcc Include="MyMain.qrc" />
     <QtUic Include="MyMain.ui" />
     <QtMoc Include="MyMain.h" />
     <ClCompile Include="MyMain.cpp" />
     <ClCompile Include="main.cpp" />
+    <QtUic Include="subWin.ui" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="qcustomplot.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyHelper.h" />
+    <QtMoc Include="subWin.h" />
     <ClInclude Include="TecellaAmp.h" />
     <ClInclude Include="TecellaAmpExample_00.h" />
   </ItemGroup>

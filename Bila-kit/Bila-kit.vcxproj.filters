@@ -61,9 +61,15 @@
     <ClCompile Include="convolve.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="subWin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="qcustomplot.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="subWin.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
@@ -77,5 +83,10 @@
     <ClInclude Include="MyHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="subWin.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
   </ItemGroup>
 </Project>

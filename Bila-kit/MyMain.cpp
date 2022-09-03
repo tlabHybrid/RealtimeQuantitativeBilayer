@@ -14,6 +14,7 @@
 #include "MyMain.h"
 #include "MyHelper.h"
 #include "qcustomplot.h"
+#include "subWin.h"
 
 #include <QTimer>
 #include <string>
@@ -26,7 +27,7 @@
 // Important variables
 int dataSource = 1;             // The source where the current is acquired from.  0: Amplifier, 1: Local ATF, 2: Local CSV
 int proteinType = 0;            // The type of target membrane protein.  0: Nanopores (AHL), 1: Ion channels (BK), 2: Ion channels (OR8)
-int postprocessType = 0;        // The type of postprocessing. 0: None, 1: Measuring conductance, 2: Measuring open probability (Po), 3: measuring Po + estimating stimuli
+int postprocessType = 0;        // The type of postprocessing. 0: None, 1: Measuring conductance, 2: Emphasis when exceeding threshold
 double opProb = 0;              // The open probability of this 1 s signal.
 double stimuli = 0;             // The estimated stimuli, which leads to the predetermined opProb.
 
@@ -55,6 +56,7 @@ MyMain::MyMain(QWidget *parent)
     ui.pushButton_4->setIcon(style.standardIcon(QStyle::SP_MediaSkipBackward));
     ui.pushButton_5->setIcon(style.standardIcon(QStyle::SP_MediaSeekBackward));
     ui.pushButton_6->setIcon(style.standardIcon(QStyle::SP_MediaPause));
+    ui.pushButton_7->setIcon(style.standardIcon(QStyle::SP_BrowserReload));
     ui.comboBox->addItem("s");
     ui.comboBox->addItem("ms");
     ui.spinBox->setMinimum(-200);
@@ -123,6 +125,7 @@ void MyMain::on_pushBtnClicked() {
         displayInfo("Protein: Alpha hemolysin from Staphylococcus aureus");
         baseline = 0;
         current_per_channel_user_specified = 44.5;
+        ui.spinBox->setValue(50);
         ui.textBrowser_2->setEnabled(false);
         ui.textBrowser_3->setEnabled(false);
         ui.textBrowser_5->setEnabled(false);
@@ -134,6 +137,7 @@ void MyMain::on_pushBtnClicked() {
         displayInfo("Protein: Big Potassium (BK) ion channel from Pig");
         baseline = 0;
         current_per_channel_user_specified = -11.5;
+        ui.spinBox->setValue(-40);
         ui.textBrowser_2->setEnabled(true);
         ui.textBrowser_3->setEnabled(true);
         ui.textBrowser_4->setText(QString::fromLocal8Bit("Estimated Membrane Potential"));
@@ -149,6 +153,7 @@ void MyMain::on_pushBtnClicked() {
         displayInfo("Protein: Olfactory Receptor (OR) 8 ion channel from Aedes Aegypti");
         baseline = 0;
         current_per_channel_user_specified = -5.0;
+        ui.spinBox->setValue(60);
         ui.textBrowser_2->setEnabled(true);
         ui.textBrowser_3->setEnabled(true);
         ui.textBrowser_4->setText(QString::fromLocal8Bit("Estimated Odor Concentration"));
@@ -165,6 +170,17 @@ void MyMain::on_pushBtnClicked() {
         return;
     }
 
+    // ****** Define the postprocessing.
+    if (ui.radioButton_13->isChecked()) {
+        postprocessType = 1;
+    }
+    else if (ui.radioButton_14->isChecked()) {
+        postprocessType = 2;
+    }
+    else {
+        postprocessType = 0;
+    }
+
     // ****** Modification of the current_per_channel_user_specified (which corresponds to channel conductance) if necessary.
     bool ok;
     double d = QInputDialog::getDouble(this, "QInputDialog::getDouble()",
@@ -172,6 +188,14 @@ void MyMain::on_pushBtnClicked() {
         Qt::WindowFlags(), 0.5);
     if (ok) {
         current_per_channel_user_specified = d;
+    }
+
+    // ****** Opening of the result emphasis window upon starting acquisition
+    if (proteinType == 1 && postprocessType == 2){
+        subWindow = new subWin(this);
+        subWindow->setWindowFlags(Qt::Window);
+        subWindow->show();
+        subWindow->changeFontColor(1);
     }
 
 
@@ -209,6 +233,13 @@ void MyMain::on_pushBtn3Clicked() {
     this->ui.pushButton_3->setEnabled(false);
 }
 
+// Function called when the value in spinBox is changed.
+// Set the value to amplifier if possible.
+void MyMain::on_spinBoxChanged(int value) {
+    // Apply the holding voltage to amplifier if applicable.
+    if (dataSource == 0) changeVoltageAmplifier(value);
+    // Change the current_per_channel through the pre-determined conducntance.
+}
 
 // ********************************************************************************************************
 //   Pushbutton slots (B) ... Motor drive related functions
@@ -228,6 +259,11 @@ void MyMain::on_pushBtn5Clicked() {
 // Function called when "||" button below the messagebox is pressed.
 void MyMain::on_pushBtn6Clicked() {
     sendSerial("c\n");
+}
+
+// Function called when "Reload" button below the messagebox is pressed.
+void MyMain::on_pushBtn7Clicked() {
+    sendSerial("r\n");
 }
 
 
@@ -365,19 +401,17 @@ void MyMain::start_graphs() {
     }
     
     // PostProcessed Data files
-    if (ui.radioButton_13->isChecked()) {
-        fopen_s(&fp, myFileName_postprocessed.c_str(), "w");
-        if (fp) {
-            fprintf(fp, "start_time [s],duration [s]\n");
-            fclose(fp);
-        }
-    }
-    else if (ui.radioButton_14->isChecked()) {
+    if (postprocessType == 1) {
+        // For nanopores, conductance measurement and output.
         fopen_s(&fp, myFileName_postprocessed.c_str(), "w");
         if (fp) {
             fprintf(fp, "step_time [s],conductance [pS]\n");  // [Note: This is completely adjusted to AHL, so I have to extend this to other proteins.] 
             fclose(fp);
         }
+    }
+    else if (postprocessType == 2) {
+        // For ion channels, emphasis at new window when exceeding the threshold.
+        // SubWindow setup
     }
 }
 
@@ -616,7 +650,7 @@ void MyMain::update_graph_1Hz() {
                 recovery_flag = true;
             }
         }
-        if (maxOpenNumber >= 1 && processedData[SAMPLE_FREQ - 1] == 0) { // Bug fixing
+        if (maxOpenNumber >= 2 && processedData[SAMPLE_FREQ - 1] == 0) { // Bug fixing
             rupture_flag = true;
             recovery_flag = true;
         }
@@ -633,8 +667,7 @@ void MyMain::update_graph_1Hz() {
                 if (processedData[idx] == 0) {
                     zero_value += currentData[idx];
                     zero_num += 1;
-                }
-                if (processedData[idx] == 1) {
+                }else if (processedData[idx] == 1) {
                     one_value += currentData[idx];
                     one_num += 1;
                 }
@@ -693,15 +726,15 @@ void MyMain::update_graph_1Hz() {
 
         // Calculating the open probability
         // double opProb = p; 
-        // zero_num / 5000 = (1-p)^number_of_channel
-        // p = 1 - pow(zero_num/5000, 1/number_of_channel)
-        // if (number_of_channel = 0) p = 0;
-        opProb = -99;    // Cannot calculate opProb when the bilayer is ruptured or number_of_channel = 0.
+        // zero_num / 5000 = (1-p)^maxOpenNumber
+        // p = 1 - pow(zero_num/5000, 1/maxOpenNumber)
+        // if (maxOpenNumber = 0) p = 0;
+        opProb = -99;    // Cannot calculate opProb when the bilayer is ruptured or maxOpenNumber = 0.
         if (!rupture_flag) {
-            if (number_of_channel != 0) {
-                opProb = 1 - pow(zero_num / double(SAMPLE_FREQ), 1.0 / number_of_channel);
-                if (opProb < 0.001) opProb = 0.001;
-                if (opProb > 0.999) opProb = 0.999;
+            if (maxOpenNumber != 0) {
+                opProb = 1 - pow(zero_num / double(SAMPLE_FREQ), 1.0 / maxOpenNumber);
+                if (opProb < 0.01) opProb = 0.01;
+                if (opProb > 0.99) opProb = 0.99;
             }
         }
 
@@ -712,11 +745,11 @@ void MyMain::update_graph_1Hz() {
         {
         case 0:
             // if AHL, do nothing for stimuli estimation.
-            // Export the number_of_channel.
+            // Export the maxOpenNumber.
             if (!rupture_flag) {
                 fopen_s(&fp, myFileName_processed.c_str(), "a");
                 if (fp) {
-                    fprintf(fp, "%d,%d\n", nowTime, number_of_channel);
+                    fprintf(fp, "%d,%d\n", nowTime, maxOpenNumber);
                 }
             }
             else {
@@ -792,7 +825,7 @@ void MyMain::update_graph_1Hz() {
         case 0:
             // If AHL, the only option available for now is to calculate the nanopore conductance.
             if (!recovery_flag) {
-                if (ui.radioButton_14->isChecked()) {
+                if (postprocessType == 1) {
                     // Evaluating the single-molecule conducntance.
                     for (int idx = 0; idx < SAMPLE_FREQ - 1; idx++) {
                         // Find the "jumping" point, which corresponds to the nanopore incorporation.
@@ -859,8 +892,15 @@ void MyMain::update_graph_1Hz() {
         case 1:
             // if BK, the only option available for now is to emphasize the threshold exceeding by wireless communication.
             if (!recovery_flag) {
-                if (ui.radioButton_13->isChecked()) {
+                if (postprocessType == 2) {
                     // Emphasis the threshold exceeding by wireless communication.
+                    subWindow->changeString(std::to_string(int(round(stimuli))).c_str());
+                    if (stimuli > 0) {
+                        subWindow->changeFontColor(2);
+                    }
+                    else {
+                        subWindow->changeFontColor(1);
+                    }
                 }
             }
             break;
@@ -873,7 +913,7 @@ void MyMain::update_graph_1Hz() {
         //***************************************************************************************
         // Actuation Block: Based on the processing results, drive peripheral devices like stepper motors.
         //***************************************************************************************
-        conductActuationSerial(rupture_flag, recovery_flag, number_of_channel);
+        conductActuationSerial(rupture_flag, recovery_flag, maxOpenNumber);
         
 
         //***************************************************************************************
