@@ -99,6 +99,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ActuationSerial.cpp" />
+    <ClCompile Include="convolve.cpp" />
     <ClCompile Include="qcustomserial.cpp" />
     <ClCompile Include="SenseAmplifier.cpp" />
     <ClCompile Include="qcustomplot.cpp" />

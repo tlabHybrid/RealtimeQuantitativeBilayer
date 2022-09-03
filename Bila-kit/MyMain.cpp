@@ -1,4 +1,4 @@
-/******************************************************************************
+ï»¿/******************************************************************************
 // MyMain.cpp
 //
 // This code is the heart of Bila-kit. Most of the functions are called from this code.
@@ -24,7 +24,6 @@
 #include <math.h>
 
 // Important variables
-const int SAMPLE_FREQ = 5000;   // 5kHz sampling
 int dataSource = 1;             // The source where the current is acquired from.  0: Amplifier, 1: Local ATF, 2: Local CSV
 int proteinType = 0;            // The type of target membrane protein.  0: Nanopores (AHL), 1: Ion channels (BK), 2: Ion channels (OR8)
 int postprocessType = 0;        // The type of postprocessing. 0: None, 1: Measuring conductance, 2: Measuring open probability (Po), 3: measuring Po + estimating stimuli
@@ -45,8 +44,8 @@ double baseline = 0.0;          // The baseline currents. Equal to the mean curr
 bool rupture_flag = false;      // Indicates whether the bilayer is ruptured during the measuring period (1s). 
 bool recovery_flag = false;     // Indicates whether the bilayer is recovering from rupture during the measuring period (1s)
 int lastOpenNumber = 0;
-double startOneMolTime = -1;
-bool oneMolContinueFlag = false;
+int on_detection = 0;
+double previousCurrent[500];    // Uses when the previous current is required (e.g. detecting nanopore jumps at exactly N (integer) seconds).
 
 MyMain::MyMain(QWidget *parent)
     : QWidget(parent)
@@ -58,6 +57,8 @@ MyMain::MyMain(QWidget *parent)
     ui.pushButton_6->setIcon(style.standardIcon(QStyle::SP_MediaPause));
     ui.comboBox->addItem("s");
     ui.comboBox->addItem("ms");
+    ui.spinBox->setMinimum(-200);
+    ui.spinBox->setMaximum(200);
     setupSerial(this);
 
     displayInfo("**------**");
@@ -135,24 +136,30 @@ void MyMain::on_pushBtnClicked() {
         current_per_channel_user_specified = -11.5;
         ui.textBrowser_2->setEnabled(true);
         ui.textBrowser_3->setEnabled(true);
-        ui.textBrowser_4->setText(QString::fromLocal8Bit("Holding voltage"));
+        ui.textBrowser_4->setText(QString::fromLocal8Bit("Estimated Membrane Potential"));
+        ui.textBrowser_4->setAlignment(Qt::AlignCenter);
         ui.textBrowser_5->setEnabled(true);
         ui.textBrowser_6->setEnabled(true);
         ui.textBrowser_6->setText(QString::fromLocal8Bit("mV"));
+        ui.textBrowser_6->setAlignment(Qt::AlignCenter);
         proteinType = 1;
     }
+    /*
     else if (ui.radioButton_6->isChecked()) {
-        displayInfo("Protein: Olfactory Receptor (OR) 8 from Aedes aegypti");
+        displayInfo("Protein: Olfactory Receptor (OR) 8 ion channel from Aedes Aegypti");
         baseline = 0;
-        current_per_channel_user_specified = 2.0;
+        current_per_channel_user_specified = -5.0;
         ui.textBrowser_2->setEnabled(true);
         ui.textBrowser_3->setEnabled(true);
-        ui.textBrowser_4->setText(QString::fromLocal8Bit("Odor Concentration"));
+        ui.textBrowser_4->setText(QString::fromLocal8Bit("Estimated Odor Concentration"));
+        ui.textBrowser_4->setAlignment(Qt::AlignCenter);
         ui.textBrowser_5->setEnabled(true);
         ui.textBrowser_6->setEnabled(true);
         ui.textBrowser_6->setText(QString::fromLocal8Bit("uM"));
+        ui.textBrowser_6->setAlignment(Qt::AlignCenter);
         proteinType = 2;
     }
+    */
     else {
         displayInfo("Protein type is not specified. Try again.");
         return;
@@ -409,8 +416,7 @@ void MyMain::update_graph_1Hz() {
         baseline = 0;
         rupture_flag = false;
         recovery_flag = false;
-        startOneMolTime = -1;
-        oneMolContinueFlag = false;
+        on_detection = 0;
 
         dataIndex_loop_num = -1;
     }
@@ -465,61 +471,152 @@ void MyMain::update_graph_1Hz() {
         // This code receives the raw (digitized) current values from "SenseAmplifier" or "SenseLocal", 
         //    then idealizes the data to the number of open nanopores/ion channels,
         int processedData[SAMPLE_FREQ]; // The idealized data (5000 samples per second).
+        for (int idx = 0; idx < SAMPLE_FREQ; idx++) processedData[idx] = -1;
+
         const double threshold = 0.75;
+        const int rupture_threshold = 370;
+        const double nanopore_detection_threshold = 0.15;
+        int maxOpenNumber = -1;
+        double filteredData[SAMPLE_FREQ];
         if (rupture_flag) {
             prev_num_channels = -1;
             number_of_channel = -1;
             lastOpenNumber = -1;
-            startOneMolTime = -1;
-            oneMolContinueFlag = false;
+            on_detection = 0;
             rupture_flag = false;
             recovery_flag = false;
         }
-        int maxOpenNumber = -1;
-        const int rupture_threshold = 500;
+        
 
-        for (int idx = 0; idx < SAMPLE_FREQ; idx++) {
-            double y_now = currentData[idx];
-            //*******
-            // If the bilayer is ruptured, break the loop after making "rupture_flag" true.
-            // To distinguish "the beginning of rupture (number -> OVERFLOW)" and "the end of rupture (OVERFLOW -> number)",
-            // we also use "recovery_flag", which prevents motor rotation on recovering.
-            if (y_now > rupture_threshold || y_now < -rupture_threshold) {
-                rupture_flag = true;
-                break;
-            }
-            //*******
-            // Open/close determination for each timestep
+        switch (proteinType)
+        {
+        case 0:
+            // If nanopores
+            convolve_EDGE(currentData, filteredData, previousCurrent, 500);
+            //for (int idx = 0; idx < SAMPLE_FREQ; idx++) currentData[idx] = filteredData[idx];
+            
+            if (lastOpenNumber < 0)lastOpenNumber = 0;
+
             if (!rupture_flag) {
-                if (current_per_channel >= 0) {   // Positive bias voltage
-                    if (y_now > (lastOpenNumber + threshold) * current_per_channel + baseline) {
-                        lastOpenNumber++;
+                for (int idx = 0; idx < SAMPLE_FREQ; idx++) {
+
+                    double y_now = currentData[idx];
+                    //*******
+                    // If the bilayer is ruptured, break the loop after making "rupture_flag" true.
+                    // To distinguish "the beginning of rupture (number -> OVERFLOW)" and "the end of rupture (OVERFLOW -> number)",
+                    // we also use "recovery_flag", which prevents motor rotation on recovering.
+                    if (y_now > rupture_threshold || y_now < -rupture_threshold) {
+                        rupture_flag = true;
+                        break;
                     }
-                    else if (y_now < (lastOpenNumber - threshold) * current_per_channel + baseline) {
-                        lastOpenNumber--;
-                        if (lastOpenNumber < 0) lastOpenNumber = 0;
+                                        
+                    if (on_detection == 1) {
+                        // find the local maximum ... find the exact position where OpenNumber changes. 
+                        if (current_per_channel >= 0) {   // Positive bias voltage
+                            if (filteredData[idx - 1] > filteredData[idx]) {
+                                lastOpenNumber++;
+                                on_detection = 3;
+                            }
+                        }
+                        else {
+                            if (filteredData[idx - 1] < filteredData[idx]) {
+                                lastOpenNumber++;
+                                on_detection = 3;
+                            }
+
+                        }
                     }
+                    else if (on_detection == 2) {
+                        // find the local minimum ... find the exact position where OpenNumber changes. 
+                        if (current_per_channel >= 0) {   // Positive bias voltage
+                            if (filteredData[idx - 1] < filteredData[idx]) {
+                                lastOpenNumber--;
+                                if (lastOpenNumber < 0) lastOpenNumber = 0;
+                                on_detection = 3;
+                            }
+                        }
+                        else {
+                            if (filteredData[idx - 1] > filteredData[idx]) {
+                                lastOpenNumber--;
+                                if (lastOpenNumber < 0) lastOpenNumber = 0;
+                                on_detection = 3;
+                            }
+                        }
+                    }
+                    else if (on_detection == 3) {
+                        // find the plateau
+                        if (abs(filteredData[idx]) < 0.5) on_detection = 0;
+                    }
+                    else {
+                        if (current_per_channel >= 0) {   // Positive bias voltage
+                            if (filteredData[idx] > current_per_channel * nanopore_detection_threshold) {
+                                on_detection = 1;
+                            }
+                            else if (filteredData[idx] < -current_per_channel * nanopore_detection_threshold) {
+                                on_detection = 2;
+                            }
+                        }
+                        else {
+                            if (filteredData[idx] < current_per_channel * nanopore_detection_threshold) {
+                                on_detection = 1;
+                            }
+                            else if (filteredData[idx] > -current_per_channel * nanopore_detection_threshold) {
+                                on_detection = 2;
+                            }
+                        }
+                    }
+                    processedData[idx] = lastOpenNumber;
+                    if (lastOpenNumber > maxOpenNumber) maxOpenNumber = lastOpenNumber;
                 }
-                else {  // Negative bias voltage
-                    if (y_now < (lastOpenNumber + threshold) * current_per_channel + baseline) {
-                        lastOpenNumber++;
-                    }
-                    else if (y_now > (lastOpenNumber - threshold) * current_per_channel + baseline) {
-                        lastOpenNumber--;
-                        if (lastOpenNumber < 0) lastOpenNumber = 0;
-                    }
-                }
-                processedData[idx] = lastOpenNumber;
-                if (lastOpenNumber > maxOpenNumber) maxOpenNumber = lastOpenNumber;
             }
+            break;
+        case 1:
+            // If ion channels
+            for (int idx = 0; idx < SAMPLE_FREQ; idx++) {
+                double y_now = currentData[idx];
+                //*******
+                // If the bilayer is ruptured, break the loop after making "rupture_flag" true.
+                // To distinguish "the beginning of rupture (number -> OVERFLOW)" and "the end of rupture (OVERFLOW -> number)",
+                // we also use "recovery_flag", which prevents motor rotation on recovering.
+                if (y_now > rupture_threshold || y_now < -rupture_threshold) {
+                    rupture_flag = true;
+                    break;
+                }
+                //*******
+                // Open/close determination for each timestep
+                if (!rupture_flag) {
+                    if (current_per_channel >= 0) {   // Positive bias voltage
+                        if (y_now > (lastOpenNumber + threshold) * current_per_channel + baseline) {
+                            lastOpenNumber++;
+                        }
+                        else if (y_now < (lastOpenNumber - threshold) * current_per_channel + baseline) {
+                            lastOpenNumber--;
+                            if (lastOpenNumber < 0) lastOpenNumber = 0;
+                        }
+                    }
+                    else {  // Negative bias voltage
+                        if (y_now < (lastOpenNumber + threshold) * current_per_channel + baseline) {
+                            lastOpenNumber++;
+                        }
+                        else if (y_now > (lastOpenNumber - threshold) * current_per_channel + baseline) {
+                            lastOpenNumber--;
+                            if (lastOpenNumber < 0) lastOpenNumber = 0;
+                        }
+                    }
+                    processedData[idx] = lastOpenNumber;
+                    if (lastOpenNumber > maxOpenNumber) maxOpenNumber = lastOpenNumber;
+                }
+            }
+            break;
         }
+
         // recovery_flag [true if OVERFLOW -> 0] [true if 2 -> 0]
         if (rupture_flag) {
             if (-rupture_threshold < currentData[SAMPLE_FREQ - 1] && currentData[SAMPLE_FREQ - 1] < rupture_threshold) {
                 recovery_flag = true;
             }
         }
-        if (maxOpenNumber >= 2 && processedData[SAMPLE_FREQ - 1] == 0) {
+        if (maxOpenNumber >= 1 && processedData[SAMPLE_FREQ - 1] == 0) { // Bug fixing
             rupture_flag = true;
             recovery_flag = true;
         }
@@ -543,7 +640,7 @@ void MyMain::update_graph_1Hz() {
                 }
             }
             if (zero_num >= 500) {
-                // Update the baseline when the change is in }50% of the single-molecule current.
+                // Update the baseline when the change is in Â±50% of the single-molecule current.
                 double tmp = zero_value / zero_num;
                 if (current_per_channel > 0) {
                     if (-0.5 * current_per_channel < tmp && tmp < 0.5 * current_per_channel) {
@@ -561,7 +658,7 @@ void MyMain::update_graph_1Hz() {
                 }
             }
 
-            // Update the conductance when the change is in }25% of the single-molecule current.
+            // Update the conductance when the change is in Â±25% of the single-molecule current.
             if (ui.checkBox_2->isChecked()) {
                 if (one_num >= 500) {
                     double tmp = one_value / one_num - baseline;
@@ -585,7 +682,7 @@ void MyMain::update_graph_1Hz() {
                 disp_str = disp_str + std::to_string(current_per_channel);
                 disp_str = disp_str + "   Baseline: ";
                 disp_str = disp_str + std::to_string(baseline);
-                this->displayInfo(disp_str.c_str());
+                //this->displayInfo(disp_str.c_str());
             }
 
         }
@@ -631,7 +728,7 @@ void MyMain::update_graph_1Hz() {
             break;
         case 1:
             // if BK, estimate the applied voltage
-            // Given the data of pig-BK, 250mM KCl, 100 uM CaCl2 [20220427_BK channel_mV •Ï‰».abf],
+            // Given the data of pig-BK, 250mM KCl, 100 uM CaCl2 [20220427_BK channel_mV å¤‰åŒ–.abf],
             // we can estimate the stimuli(x) from the open probability (p) by applying sigmoidal function.
             // p = 1 / (1 + exp(-a*(x-x0)))
             // x = x0 + ln(p/(1-p))/a
@@ -689,86 +786,42 @@ void MyMain::update_graph_1Hz() {
         }
 
 
-        // Feature extraction 2: Calculation of single-molecule conductance of nanopores
+        // Feature extraction 2: Calculation of single-molecule conductance of nanopores, or emphasis of the threshold detection results.
         switch (proteinType)
         {
         case 0:
+            // If AHL, the only option available for now is to calculate the nanopore conductance.
             if (!recovery_flag) {
-
-                if (ui.radioButton_13->isChecked()) {
-                    // Prolonging the single-molecule time
-                    double startTime = -1; double endTime = -1;
-                    bool oneMolFlag = false;
-                    for (int idx = 0; idx < SAMPLE_FREQ; idx++) {
-                        if ((processedData[idx] == 1 && oneMolFlag == false) || (idx == 0 && oneMolContinueFlag == true)) {
-                            startTime = currentTime[idx];
-                            oneMolFlag = true;
-                            if (!oneMolContinueFlag) {
-                                startOneMolTime = startTime;
-                                oneMolContinueFlag = true;
-                            }
-                        }
-                        if (processedData[idx] != 1 && oneMolFlag == true) {
-                            // Graph plotting
-                            endTime = currentTime[idx];
-                            double tmpx[] = { startTime, startTime, endTime, endTime };
-                            double tmpy[] = { 0, 500, 500, 0 };
-                            for (int i = 0; i < 4; i++) ui.customPlot->graph(1)->addData(tmpx[i], tmpy[i]);
-                            oneMolFlag = false;
-                            if (oneMolContinueFlag) {
-                                double oneMolTime = endTime - startOneMolTime;
-                                if (oneMolTime > 0.02) {
-                                    this->displayInfo(std::to_string(oneMolTime).c_str());
-                                    // CSV export
-                                    fopen_s(&fp, myFileName_postprocessed.c_str(), "a");
-                                    if (fp) {
-                                        fprintf(fp, "%lf,%lf\n", std::round(startOneMolTime * 100) / 100, std::round(oneMolTime * 100) / 100);
-                                        fclose(fp);
-                                    }
-                                }
-                                oneMolContinueFlag = false;
-                            }
-                        }
-                        if (processedData[idx] == -1) {
-                            // If the bilayer is ruptured, terminate all process and break.
-                            oneMolFlag = false;
-                            startOneMolTime = -1;
-                            oneMolContinueFlag = false;
-                            this->displayInfo("Rupture detected");
-                            break;
-                        }
-                    }
-                    if (oneMolFlag) {
-                        // Continue to the next timestep.
-                        endTime = currentTime[SAMPLE_FREQ - 1];
-                        double tmpx[] = { startTime, startTime, endTime, endTime };
-                        double tmpy[] = { 0, 500, 500, 0 };
-                        for (int i = 0; i < 4; i++) ui.customPlot->graph(1)->addData(tmpx[i], tmpy[i]);
-                        oneMolFlag = false;
-                    }
-                }
-
                 if (ui.radioButton_14->isChecked()) {
                     // Evaluating the single-molecule conducntance.
                     for (int idx = 0; idx < SAMPLE_FREQ - 1; idx++) {
                         // Find the "jumping" point, which corresponds to the nanopore incorporation.
-                        if (processedData[idx] == 0 && processedData[idx + 1] == 1) { //processedData[idx + 1] - processedData[idx] == 1 && processedData[idx] != -1
-                            if (idx < 200 || idx > SAMPLE_FREQ - 1 - 200) continue; // To ensure the calculation accuracy
-                            int zero_start_idx = idx - 500;
-                            if (zero_start_idx < 0)zero_start_idx = 0;
-                            int zero_end_idx = idx - 100;
-                            int one_start_idx = idx + 100;
+                        if (processedData[idx + 1] - processedData[idx] == 1 && processedData[idx] != -1) {  //if (processedData[idx] == 0 && processedData[idx + 1] == 1) {
+                            // Use previousCurrent[] to compensate the out-of-range data. (e.g. if idx == 0, most of the data are loaded from previousCurrent[], not currentData[].)
+                            int zero_end_idx = idx;
+                            int zero_start_idx = -1;
+                            double zero_value = 0;
+                            for (zero_start_idx = zero_end_idx; zero_start_idx >= zero_end_idx - 500; zero_start_idx--) {
+                                if (zero_start_idx >= 0) {
+                                    if (processedData[zero_start_idx] != processedData[zero_end_idx]) break;
+                                    zero_value += currentData[zero_start_idx];
+                                }
+                                else {
+                                    zero_value += previousCurrent[500 + zero_start_idx];
+                                }
+                            }
+                            zero_value = zero_value / ((double)zero_end_idx - zero_start_idx);
+
+                            int one_start_idx = idx + 1;
                             int one_end_idx = -1;
+                            double one_value = 0;
                             for (one_end_idx = one_start_idx; one_end_idx < SAMPLE_FREQ - 1; one_end_idx++) {
                                 if (processedData[one_end_idx] != processedData[one_start_idx]) break;
                                 if (one_end_idx > idx + 500) break;
+                                one_value += currentData[one_end_idx];
                             }
-                            double zero_value = 0;
-                            for (int i = zero_start_idx; i <= zero_end_idx; i++) zero_value += currentData[i];
-                            zero_value = zero_value / (zero_end_idx - zero_start_idx);
-                            double one_value = 0;
-                            for (int i = one_start_idx; i <= one_end_idx; i++) one_value += currentData[i];
-                            one_value = one_value / (one_end_idx - one_start_idx);
+                            one_value = one_value / ((double)one_end_idx - one_start_idx);
+
                             // If the value is too strange, not use one.
                             if (one_value - zero_value > current_per_channel * 1.9 || one_value - zero_value < current_per_channel * 0.1) continue;
 
@@ -779,7 +832,12 @@ void MyMain::update_graph_1Hz() {
 
                             // CSV export after converting the current [pA] into conductance [pS] using heuristic knowledge of the bias voltage (50 [mV])
                             double one_conductance = (one_value - zero_value) * 1000 / 50;
-                            this->displayInfo(std::to_string(one_conductance).c_str());
+
+                            std::string disp_str = "Estimated conducatnce: ";
+                            disp_str = disp_str + std::to_string(one_conductance);
+                            disp_str = disp_str + " [pS]";
+                            this->displayInfo(disp_str.c_str());
+
                             fopen_s(&fp, myFileName_postprocessed.c_str(), "a");
                             if (fp) {
                                 fprintf(fp, "%lf,%lf\n", std::round(currentTime[one_start_idx] * 100) / 100, std::round(one_conductance * 100) / 100);
@@ -790,7 +848,7 @@ void MyMain::update_graph_1Hz() {
 
                         if (processedData[idx] == -1) {
                             // If the bilayer is ruptured, terminate all process and break.
-                            this->displayInfo("Rupture detected");
+                            //this->displayInfo("Rupture detected");
                             break;
                         }
                     }
@@ -799,7 +857,12 @@ void MyMain::update_graph_1Hz() {
             }
             break;
         case 1:
-            // if BK, do nothing
+            // if BK, the only option available for now is to emphasize the threshold exceeding by wireless communication.
+            if (!recovery_flag) {
+                if (ui.radioButton_13->isChecked()) {
+                    // Emphasis the threshold exceeding by wireless communication.
+                }
+            }
             break;
         case 2:
             // if OR8, do nothing
@@ -822,10 +885,12 @@ void MyMain::update_graph_1Hz() {
             if (maxOpenNumber != number_of_channel) {
                 number_of_channel = maxOpenNumber;
                 ui.textBrowser_12->setText(QString::fromLocal8Bit(std::to_string(maxOpenNumber).c_str()));
+                ui.textBrowser_12->setAlignment(Qt::AlignCenter);
             }
         }
         else {
             ui.textBrowser_12->setText(QString::fromLocal8Bit("X"));
+            ui.textBrowser_12->setAlignment(Qt::AlignCenter);
         }
 
         // Add the data and update the graphs on the UI.
@@ -870,31 +935,43 @@ void MyMain::update_graph_1Hz() {
                 // if BK
                 if (opProb < 0) {
                     ui.textBrowser_2->setText(QString::fromLocal8Bit("X"));
+                    ui.textBrowser_2->setAlignment(Qt::AlignCenter);
                     ui.textBrowser_5->setText(QString::fromLocal8Bit("X"));
+                    ui.textBrowser_5->setAlignment(Qt::AlignCenter);
                 }
                 else {
                     ui.textBrowser_2->setText(QString::fromLocal8Bit(std::to_string(int(opProb * 100)).c_str()));
+                    ui.textBrowser_2->setAlignment(Qt::AlignCenter);
                     ui.textBrowser_5->setText(QString::fromLocal8Bit(std::to_string(int(round(stimuli))).c_str()));
+                    ui.textBrowser_5->setAlignment(Qt::AlignCenter);
                     ui.textBrowser_6->setText(QString::fromLocal8Bit("mV"));
+                    ui.textBrowser_6->setAlignment(Qt::AlignCenter);
                 }
                 break;
             case 2:
                 // if OR8 
                 if (opProb < 0) {
                     ui.textBrowser_2->setText(QString::fromLocal8Bit("X"));
+                    ui.textBrowser_2->setAlignment(Qt::AlignCenter);
                     ui.textBrowser_5->setText(QString::fromLocal8Bit("X"));
+                    ui.textBrowser_5->setAlignment(Qt::AlignCenter);
                 }
                 else {
                     ui.textBrowser_2->setText(QString::fromLocal8Bit(std::to_string(int(opProb * 100)).c_str()));
+                    ui.textBrowser_2->setAlignment(Qt::AlignCenter);
                     if (stimuli > -6) {
                         double concentration_uM = pow(10, stimuli - (-6));
                         ui.textBrowser_5->setText(QString::fromLocal8Bit(std::to_string(int(round(concentration_uM))).c_str()));
+                        ui.textBrowser_5->setAlignment(Qt::AlignCenter);
                         ui.textBrowser_6->setText(QString::fromLocal8Bit("uM"));
+                        ui.textBrowser_6->setAlignment(Qt::AlignCenter);
                     }
                     else {
                         double concentration_nM = pow(10, stimuli - (-9));
                         ui.textBrowser_5->setText(QString::fromLocal8Bit(std::to_string(int(round(concentration_nM))).c_str()));
+                        ui.textBrowser_5->setAlignment(Qt::AlignCenter);
                         ui.textBrowser_6->setText(QString::fromLocal8Bit("nM"));
+                        ui.textBrowser_6->setAlignment(Qt::AlignCenter);
                     }
                 }
                 break;
@@ -903,7 +980,11 @@ void MyMain::update_graph_1Hz() {
         else {
             // ruptured
             ui.textBrowser_2->setText(QString::fromLocal8Bit("X"));
+            ui.textBrowser_2->setAlignment(Qt::AlignCenter);
             ui.textBrowser_5->setText(QString::fromLocal8Bit("X"));
+            ui.textBrowser_5->setAlignment(Qt::AlignCenter);
         }
+
+        for (int idx = 0; idx < 500; idx++) previousCurrent[idx] = currentData[SAMPLE_FREQ - 500 + idx];
     }
 }

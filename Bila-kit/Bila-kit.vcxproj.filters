@@ -58,6 +58,9 @@
     <ClCompile Include="ActuationSerial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="convolve.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="qcustomplot.h">

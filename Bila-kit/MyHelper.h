@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MyMain.h"
-extern const int SAMPLE_FREQ;
+#define SAMPLE_FREQ 5000   // 5kHz sampling
 
 /*  Sense Block  *****************************************************************************/
 // SenseAmplifier.cpp // 
@@ -16,7 +16,8 @@ int readLocal(double* timestamp, double* destination, int dataIndex_loop_num);
 
 /*  Processing Block  *****************************************************************************/
 // See the comment at "Processing Block" in MyMain.cpp.
-
+// convolve.cpp //
+void convolve_EDGE(double* X, double* Y, double* prevX, int prevX_size);
 
 /*  Actuation Block  *****************************************************************************/
 // qcustomserial.cpp //
