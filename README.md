@@ -5,15 +5,16 @@ This repository contains the software for an article [HOGEHOGE](https://www.kika
 Bila-kit is a toolkit for lipid bilayer researchers, providing them with the in-situ current acquisition and the following analysis & feedback system. Therefore, the researchers can automate lipid bilayer experiments using Bila-kit. 
 
 ## Currently applicable to:
-- [x]  Detection & recovery from measurement failures (e.g. rupture or failure of lipid bilayers) without human supervision.
-- [x]  Automatic measurement of electrical conductance of biological nanopores (e.g. alpha-hemolysin) to create a histogram.
-- [x]  Real-time estimation of the concentration of chemical substances (e.g. beta-cyclodextrin) using corresponding membrane proteins (e.g. alpha-hemolysin) for real-time sensing applications.
-- [x]  In-situ calculation of open probability of ion channels (e.g. big-pottasium channel) under their promotors/inhibitors (e.g. verapamil) to effciently investigate drug candidates. 
+- [x]  Immediate recovery from measurement failures (e.g. rupture or failure of lipid bilayers) without human supervision or intervention.
+- [x]  Automatic acquisition of a large amount of data on the electrical conductance of biological nanopores (e.g. alpha-hemolysin) to create a histogram without manual labor, for the efficient research and investigation of membrane proteins.
+- [x]  Real-time and in-situ estimation of the applied physiological stimuli (e.g. membrane potential) from the gating current and the corresponding open probability of ion channels (e.g. big-potassium channel), for the real-time sensing applications.
 
 ## Currently dealing with:
+- [ ] Application of the platform to drug discovery industry,like promotor/inhibitor investigation for ion channels.
 - [ ] Measurement of membrane proteins with low S/N ratio (i.e. with too small conductances).
 - [ ] Introduction of object-oriented programming to the source codes (poor structuring for now).
 - [ ] Improvement in algorithms for determining the state/number of membrane proteins.
+- [ ] Introducing a better peripherals to actuation system for better experimental results.
 
 
 # Installation procedure
@@ -58,7 +59,7 @@ You can use your preferable microcomputers for driving peripheral devices (such 
 # Usage
 
 ## Setup the hardware
-![Device image](/Assets/device.PNG)
+![Device image](/Bila-kit/images/device.PNG)
 
 ### Amplifier
 * Connect the amplifier with your PC.
@@ -88,15 +89,16 @@ Here is the procedure to run the Bila-kit application.
 
 ### Setup
 * Build and run the application in Visual Studio.
-* Rotate the lipid bilayer chamber with the "rotation" button to the correct position.
+* Rotate the lipid bilayer chamber with the "rotation" button to the appropriate position.
 * Cover the whole system with Faraday Cage.
-* Select "Amplifier" as the data source.
+* Select "Amplifier" as the data source. 
+  * [Note] You can reload the recorded local data by selecting "ATF" or "CSV" columns. For detail of data loader, please refer to the source code.
+* Select the appropriate protein as the protein type.
+* Select the appropriate postprocessing method.
 * Press "Setup" button and wait until the connection and calibration is finished.
+* Enter the appropriate conductance and bias membrane voltage.
 
 ### Acquire
-* Select the appropriate protein as the protein type.
-* Enter the appropriate conductance and bias membrane voltage.
-* Select the appropriate postprocessing method.
 * Press "Acquire" button to start the acquisition.
   * The graph is automatically scrolls.
   * Every second, the raw current value, the idealized data, the post processed data (open probability, estimated stimuli, etc.) are exported to CSV files in "log" directory.
@@ -117,7 +119,7 @@ If you want to use Bila-kit without Visual Studio (e.g. other user's PC), deploy
 
 
 # About a licence
-Bila-kit is open-source except some API/DLLs, so you can freely modify this application to meet your demands. Although not obligatory, we would really appreciate if you cite the following paper.
+Bila-kit is open-source except manufacturer's API/DLLs, so you can freely modify this application to meet your demands. Although not obligatory, we would really appreciate if you cite the following paper.
 
 [HOGE]
 
