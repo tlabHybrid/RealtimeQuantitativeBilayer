@@ -39,8 +39,9 @@ double dataStartTime = 0;        // (Local data only) the time of the first row.
 // Variables for Processing Block
 int number_of_channel = 0;      // Number of channels (proteins) in the lipid bilayer during 1s period. 
 int prev_num_channels = 0;      // number_of_channel at the previous (1 s ahead) timestep.
-double current_per_channel = 0.0;     // Current per single channel [pA]. Equal to (conductance) * (bial voltage). AHL = 44.5, BK = 10, OR = 2 (roughly).
-double current_per_channel_user_specified = 0.0;      // User input of current_per_channel.
+double current_per_channel = 0.0;     // Current per single channel [pA]. Equal to (conductance) * (bias voltage). AHL = 44.5pA @ +50mV, BK = -11.5pA @ -40mV
+double conductance_user_specified = 0.0;        // User input of conductance [nS] per channel.
+int bias_voltage_user_specified = 50;           // User input of bias voltage [mV].
 double baseline = 0.0;          // The baseline currents. Equal to the mean current when all channels are closed (lastOpenNumber == 0). 
 bool rupture_flag = false;      // Indicates whether the bilayer is ruptured during the measuring period (1s). 
 bool recovery_flag = false;     // Indicates whether the bilayer is recovering from rupture during the measuring period (1s)
@@ -124,8 +125,8 @@ void MyMain::on_pushBtnClicked() {
         // Perhaps in the future, this option will be changed to "Nanopores".
         displayInfo("Protein: Alpha hemolysin from Staphylococcus aureus");
         baseline = 0;
-        current_per_channel_user_specified = 44.5;
-        ui.spinBox->setValue(50);
+        conductance_user_specified = 0.89;  // [nS]
+        bias_voltage_user_specified = 50;   // [mV]
         ui.textBrowser_2->setEnabled(false);
         ui.textBrowser_3->setEnabled(false);
         ui.textBrowser_5->setEnabled(false);
@@ -136,8 +137,8 @@ void MyMain::on_pushBtnClicked() {
         // Perhaps in the future, this option will be changed to "Ion channels" altogether with the below option.
         displayInfo("Protein: Big Potassium (BK) ion channel from Pig");
         baseline = 0;
-        current_per_channel_user_specified = -11.5;
-        ui.spinBox->setValue(-40);
+        conductance_user_specified = 0.285;  // [nS]
+        bias_voltage_user_specified = -40;   // [mV]
         ui.textBrowser_2->setEnabled(true);
         ui.textBrowser_3->setEnabled(true);
         ui.textBrowser_4->setText(QString::fromLocal8Bit("Estimated Membrane Potential"));
@@ -152,8 +153,9 @@ void MyMain::on_pushBtnClicked() {
     else if (ui.radioButton_6->isChecked()) {
         displayInfo("Protein: Olfactory Receptor (OR) 8 ion channel from Aedes Aegypti");
         baseline = 0;
-        current_per_channel_user_specified = -5.0;
-        ui.spinBox->setValue(60);
+        conductance_user_specified = 0.083;  // [nS]
+        bias_voltage_user_specified = 60;   // [mV]
+        ui.spinBox->setValue(bias_voltage_user_specified);
         ui.textBrowser_2->setEnabled(true);
         ui.textBrowser_3->setEnabled(true);
         ui.textBrowser_4->setText(QString::fromLocal8Bit("Estimated Odor Concentration"));
@@ -181,14 +183,22 @@ void MyMain::on_pushBtnClicked() {
         postprocessType = 0;
     }
 
-    // ****** Modification of the current_per_channel_user_specified (which corresponds to channel conductance) if necessary.
+    // ****** Modification of the current_per_channel (which corresponds to channel conductance and bias voltage) if necessary.
     bool ok;
     double d = QInputDialog::getDouble(this, "QInputDialog::getDouble()",
-        "Do you want to modify the current value per channel?", current_per_channel_user_specified, -100, 100, 1, &ok,
-        Qt::WindowFlags(), 0.5);
+        "Do you want to modify the conductance value per channel?", conductance_user_specified, 0, 10, 3, &ok,
+        Qt::WindowFlags(), 0.001);
     if (ok) {
-        current_per_channel_user_specified = d;
+        conductance_user_specified = d;
     }
+    int d2 = QInputDialog::getInt(this, "QInputDialog::getInt()",
+        "Do you want to modify the bias voltage?", bias_voltage_user_specified, -100, 100, 1, &ok,
+        Qt::WindowFlags());
+    if (ok) {
+        bias_voltage_user_specified = d2;
+    }
+    current_per_channel = conductance_user_specified * (double)bias_voltage_user_specified;  // [pA]
+    ui.spinBox->setValue(bias_voltage_user_specified);
 
     // ****** Opening of the result emphasis window upon starting acquisition
     if (proteinType == 1 && postprocessType == 2){
@@ -239,6 +249,8 @@ void MyMain::on_spinBoxChanged(int value) {
     // Apply the holding voltage to amplifier if applicable.
     if (dataSource == 0) changeVoltageAmplifier(value);
     // Change the current_per_channel through the pre-determined conducntance.
+    bias_voltage_user_specified = value;
+    current_per_channel = conductance_user_specified * (double)bias_voltage_user_specified;  // [pA]
 }
 
 // ********************************************************************************************************
@@ -446,7 +458,7 @@ void MyMain::update_graph_1Hz() {
         lastOpenNumber = -1;
         number_of_channel = -1;
         prev_num_channels = -1;
-        current_per_channel = current_per_channel_user_specified;
+        current_per_channel = conductance_user_specified * (double)bias_voltage_user_specified;  // [pA]
         baseline = 0;
         rupture_flag = false;
         recovery_flag = false;
@@ -546,13 +558,13 @@ void MyMain::update_graph_1Hz() {
                                         
                     if (on_detection == 1) {
                         // find the local maximum ... find the exact position where OpenNumber changes. 
-                        if (current_per_channel >= 0) {   // Positive bias voltage
+                        if (current_per_channel > 0.1 && idx >= 1) {   // Positive bias voltage
                             if (filteredData[idx - 1] > filteredData[idx]) {
                                 lastOpenNumber++;
                                 on_detection = 3;
                             }
                         }
-                        else {
+                        else if (current_per_channel < -0.1 && idx >= 1) {
                             if (filteredData[idx - 1] < filteredData[idx]) {
                                 lastOpenNumber++;
                                 on_detection = 3;
@@ -562,14 +574,14 @@ void MyMain::update_graph_1Hz() {
                     }
                     else if (on_detection == 2) {
                         // find the local minimum ... find the exact position where OpenNumber changes. 
-                        if (current_per_channel >= 0) {   // Positive bias voltage
+                        if (current_per_channel > 0.1 && idx >= 1) {   // Positive bias voltage
                             if (filteredData[idx - 1] < filteredData[idx]) {
                                 lastOpenNumber--;
                                 if (lastOpenNumber < 0) lastOpenNumber = 0;
                                 on_detection = 3;
                             }
                         }
-                        else {
+                        else if (current_per_channel < -0.1 && idx >= 1) {
                             if (filteredData[idx - 1] > filteredData[idx]) {
                                 lastOpenNumber--;
                                 if (lastOpenNumber < 0) lastOpenNumber = 0;
@@ -582,7 +594,7 @@ void MyMain::update_graph_1Hz() {
                         if (abs(filteredData[idx]) < 0.5) on_detection = 0;
                     }
                     else {
-                        if (current_per_channel >= 0) {   // Positive bias voltage
+                        if (current_per_channel > 0.1) {   // Positive bias voltage
                             if (filteredData[idx] > current_per_channel * nanopore_detection_threshold) {
                                 on_detection = 1;
                             }
@@ -590,7 +602,7 @@ void MyMain::update_graph_1Hz() {
                                 on_detection = 2;
                             }
                         }
-                        else {
+                        else if (current_per_channel < -0.1) {
                             if (filteredData[idx] < current_per_channel * nanopore_detection_threshold) {
                                 on_detection = 1;
                             }
@@ -619,7 +631,7 @@ void MyMain::update_graph_1Hz() {
                 //*******
                 // Open/close determination for each timestep
                 if (!rupture_flag) {
-                    if (current_per_channel >= 0) {   // Positive bias voltage
+                    if (current_per_channel > 0.1) {   // Positive bias voltage
                         if (y_now > (lastOpenNumber + threshold) * current_per_channel + baseline) {
                             lastOpenNumber++;
                         }
@@ -628,7 +640,7 @@ void MyMain::update_graph_1Hz() {
                             if (lastOpenNumber < 0) lastOpenNumber = 0;
                         }
                     }
-                    else {  // Negative bias voltage
+                    else if (current_per_channel < -0.1) {  // Negative bias voltage
                         if (y_now < (lastOpenNumber + threshold) * current_per_channel + baseline) {
                             lastOpenNumber++;
                         }
@@ -636,6 +648,10 @@ void MyMain::update_graph_1Hz() {
                             lastOpenNumber--;
                             if (lastOpenNumber < 0) lastOpenNumber = 0;
                         }
+                    }
+                    else {   // When 0 mV is applied, the post processing cannnot be conducted.
+                        rupture_flag = true;
+                        recovery_flag = true;
                     }
                     processedData[idx] = lastOpenNumber;
                     if (lastOpenNumber > maxOpenNumber) maxOpenNumber = lastOpenNumber;
@@ -891,7 +907,7 @@ void MyMain::update_graph_1Hz() {
             break;
         case 1:
             // if BK, the only option available for now is to emphasize the threshold exceeding by wireless communication.
-            if (!recovery_flag) {
+            if (!rupture_flag) {
                 if (postprocessType == 2) {
                     // Emphasis the threshold exceeding by wireless communication.
                     subWindow->changeString(std::to_string(int(round(stimuli))).c_str());
@@ -901,6 +917,13 @@ void MyMain::update_graph_1Hz() {
                     else {
                         subWindow->changeFontColor(1);
                     }
+                }
+            }
+            else {
+                if (postprocessType == 2) {
+                    // Emphasis the threshold exceeding by wireless communication.
+                    subWindow->changeString("[XX]");
+                    subWindow->changeFontColor(1);
                 }
             }
             break;
