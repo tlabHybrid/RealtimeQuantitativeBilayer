@@ -48,6 +48,8 @@ bool recovery_flag = false;     // Indicates whether the bilayer is recovering f
 int lastOpenNumber = 0;
 int on_detection = 0;
 double previousCurrent[500];    // Uses when the previous current is required (e.g. detecting nanopore jumps at exactly N (integer) seconds).
+bool corrections_user_specified[2];
+
 
 MyMain::MyMain(QWidget *parent)
     : QWidget(parent)
@@ -124,7 +126,6 @@ void MyMain::on_pushBtnClicked() {
     if (ui.radioButton_4->isChecked()) {
         // Perhaps in the future, this option will be changed to "Nanopores".
         displayInfo("Protein: Alpha hemolysin from Staphylococcus aureus");
-        baseline = 0;
         conductance_user_specified = 0.89;  // [nS]
         bias_voltage_user_specified = 50;   // [mV]
         ui.textBrowser_2->setEnabled(false);
@@ -136,7 +137,6 @@ void MyMain::on_pushBtnClicked() {
     else if (ui.radioButton_5->isChecked()) {
         // Perhaps in the future, this option will be changed to "Ion channels" altogether with the below option.
         displayInfo("Protein: Big Potassium (BK) ion channel from Pig");
-        baseline = 0;
         conductance_user_specified = 0.285;  // [nS]
         bias_voltage_user_specified = -40;   // [mV]
         ui.textBrowser_2->setEnabled(true);
@@ -152,7 +152,6 @@ void MyMain::on_pushBtnClicked() {
     /*
     else if (ui.radioButton_6->isChecked()) {
         displayInfo("Protein: Olfactory Receptor (OR) 8 ion channel from Aedes Aegypti");
-        baseline = 0;
         conductance_user_specified = 0.083;  // [nS]
         bias_voltage_user_specified = 60;   // [mV]
         ui.spinBox->setValue(bias_voltage_user_specified);
@@ -186,19 +185,31 @@ void MyMain::on_pushBtnClicked() {
     // ****** Modification of the current_per_channel (which corresponds to channel conductance and bias voltage) if necessary.
     bool ok;
     double d = QInputDialog::getDouble(this, "QInputDialog::getDouble()",
-        "Do you want to modify the conductance value per channel?", conductance_user_specified, 0, 10, 3, &ok,
+        "Do you want to modify the conductance per channel [nS]?", conductance_user_specified, 0, 10, 3, &ok,
         Qt::WindowFlags(), 0.001);
     if (ok) {
         conductance_user_specified = d;
     }
     int d2 = QInputDialog::getInt(this, "QInputDialog::getInt()",
-        "Do you want to modify the bias voltage?", bias_voltage_user_specified, -100, 100, 1, &ok,
+        "Do you want to modify the bias voltage [mV]?", bias_voltage_user_specified, -100, 100, 1, &ok,
         Qt::WindowFlags());
     if (ok) {
         bias_voltage_user_specified = d2;
     }
     current_per_channel = conductance_user_specified * (double)bias_voltage_user_specified;  // [pA]
     ui.spinBox->setValue(bias_voltage_user_specified);
+    baseline = 0;
+
+    std::string disp_str = "Current per Channel: ";
+    disp_str = disp_str + std::to_string(current_per_channel);
+    disp_str = disp_str + " [pA]";
+    this->displayInfo(disp_str.c_str());
+    disp_str = "Conductance: ";
+    disp_str = disp_str + std::to_string(conductance_user_specified);
+    disp_str = disp_str + "  [nS],   Bias voltage: ";
+    disp_str = disp_str + std::to_string(bias_voltage_user_specified);
+    disp_str = disp_str + " [mV]";
+    this->displayInfo(disp_str.c_str());
 
     // ****** Opening of the result emphasis window upon starting acquisition
     if (proteinType == 1 && postprocessType == 2){
@@ -222,6 +233,10 @@ void MyMain::on_pushBtnClicked() {
 void MyMain::on_pushBtn2Clicked() {
     // ****** Start graphs and register the 1 Hz callback function [update_graph_1Hz()].
     this->start_graphs();
+
+    // Record the first state of checkboxes
+    corrections_user_specified[0] = ui.checkBox->isChecked();
+    corrections_user_specified[1] = ui.checkBox_2->isChecked();
     
     displayInfo("Acquisition has started.  Push Stop button to stop acquisition.");
     displayInfo("**------**");
@@ -251,6 +266,15 @@ void MyMain::on_spinBoxChanged(int value) {
     // Change the current_per_channel through the pre-determined conducntance.
     bias_voltage_user_specified = value;
     current_per_channel = conductance_user_specified * (double)bias_voltage_user_specified;  // [pA]
+
+    // If necessary, automatically conducts baseline/conductance correction.
+    if (corrections_user_specified[0] == true) {
+        baseline = 0;
+        ui.checkBox->setChecked(true);
+    }
+    if (corrections_user_specified[1] == true) {
+        ui.checkBox_2->setChecked(true);
+    }
 }
 
 // ********************************************************************************************************
@@ -390,7 +414,7 @@ void MyMain::start_graphs() {
     case 1:
         fopen_s(&fp, myFileName_processed.c_str(), "w");
         if (fp) {
-            fprintf(fp, "time [s],opProb,voltage [mV]\n");
+            fprintf(fp, "time [s],opProb,estimatedVoltage [mV],appliedVoltage [mV]\n");
             fclose(fp);
         }
         break;
@@ -423,7 +447,7 @@ void MyMain::start_graphs() {
     }
     else if (postprocessType == 2) {
         // For ion channels, emphasis at new window when exceeding the threshold.
-        // SubWindow setup
+        // SubWindow setup is not needed here: pass.
     }
 }
 
@@ -495,9 +519,14 @@ void MyMain::update_graph_1Hz() {
             readAmplifier(currentTime, currentData, dataIndex_loop_num);
         }
         else {
-            if (readLocal(currentTime, currentData, dataIndex_loop_num) == -1) {
+            int returnLocal = readLocal(currentTime, currentData, dataIndex_loop_num);
+            if (returnLocal == -1) {
                 this->on_pushBtn3Clicked();  // If the data range is over, terminate the process.
                 return;
+            }
+            else if (returnLocal != 1) {
+                // This means that the local file contains "bias voltage changing signal" at this timestep.
+                ui.spinBox->setValue(returnLocal);
             }
         }
 
@@ -561,12 +590,14 @@ void MyMain::update_graph_1Hz() {
                         if (current_per_channel > 0.1 && idx >= 1) {   // Positive bias voltage
                             if (filteredData[idx - 1] > filteredData[idx]) {
                                 lastOpenNumber++;
+                                if (ui.checkBox_3->isChecked() && lastOpenNumber > 1) lastOpenNumber = 1;
                                 on_detection = 3;
                             }
                         }
                         else if (current_per_channel < -0.1 && idx >= 1) {
                             if (filteredData[idx - 1] < filteredData[idx]) {
                                 lastOpenNumber++;
+                                if (ui.checkBox_3->isChecked() && lastOpenNumber > 1) lastOpenNumber = 1;
                                 on_detection = 3;
                             }
 
@@ -634,6 +665,7 @@ void MyMain::update_graph_1Hz() {
                     if (current_per_channel > 0.1) {   // Positive bias voltage
                         if (y_now > (lastOpenNumber + threshold) * current_per_channel + baseline) {
                             lastOpenNumber++;
+                            if (ui.checkBox_3->isChecked() && lastOpenNumber > 1) lastOpenNumber = 1;
                         }
                         else if (y_now < (lastOpenNumber - threshold) * current_per_channel + baseline) {
                             lastOpenNumber--;
@@ -643,6 +675,7 @@ void MyMain::update_graph_1Hz() {
                     else if (current_per_channel < -0.1) {  // Negative bias voltage
                         if (y_now < (lastOpenNumber + threshold) * current_per_channel + baseline) {
                             lastOpenNumber++;
+                            if (ui.checkBox_3->isChecked() && lastOpenNumber > 1) lastOpenNumber = 1;
                         }
                         else if (y_now > (lastOpenNumber - threshold) * current_per_channel + baseline) {
                             lastOpenNumber--;
@@ -673,7 +706,7 @@ void MyMain::update_graph_1Hz() {
 
         // Baseline correction
         int zero_num = 0;
-        if (!rupture_flag) {
+        if (!rupture_flag && !recovery_flag) {
             double zero_value = 0;
             double one_value = 0;
             int one_num = 0;
@@ -688,38 +721,45 @@ void MyMain::update_graph_1Hz() {
                     one_num += 1;
                 }
             }
-            if (zero_num >= 500) {
-                // Update the baseline when the change is in ±50% of the single-molecule current.
-                double tmp = zero_value / zero_num;
-                if (current_per_channel > 0) {
-                    if (-0.5 * current_per_channel < tmp && tmp < 0.5 * current_per_channel) {
-                        if (ui.checkBox_2->isChecked()) current_per_channel -= (tmp - baseline);
-                        if (ui.checkBox->isChecked()) baseline = tmp;
-                        updated = true;
+
+            // Update the baseline when the change is in ±50% of the single-molecule current.
+            if (ui.checkBox->isChecked()) {
+                if (zero_num >= 10) { // For better stability
+                    double tmp = zero_value / zero_num;
+                    if (current_per_channel > 0) {
+                        if (-0.5 * current_per_channel < tmp && tmp < 0.5 * current_per_channel) {
+                            // if (ui.checkBox_2->isChecked()) current_per_channel -= (tmp - baseline);
+                            baseline = tmp;
+                            ui.checkBox->setChecked(false); // Perform correction only once after checking for better analysis result
+                            updated = true;
+                        }
                     }
-                }
-                else {
-                    if (0.5 * current_per_channel < tmp && tmp < -0.5 * current_per_channel) {
-                        if (ui.checkBox_2->isChecked()) current_per_channel -= (tmp - baseline);
-                        if (ui.checkBox->isChecked()) baseline = tmp;
-                        updated = true;
+                    else {
+                        if (0.5 * current_per_channel < tmp && tmp < -0.5 * current_per_channel) {
+                            // if (ui.checkBox_2->isChecked()) current_per_channel -= (tmp - baseline);
+                            baseline = tmp;
+                            ui.checkBox->setChecked(false);
+                            updated = true;
+                        }
                     }
                 }
             }
 
             // Update the conductance when the change is in ±25% of the single-molecule current.
             if (ui.checkBox_2->isChecked()) {
-                if (one_num >= 500) {
+                if (one_num >= 10) {
                     double tmp = one_value / one_num - baseline;
                     if (current_per_channel > 0) {
                         if (0.75 * current_per_channel < tmp && tmp < 1.25 * current_per_channel) {
                             current_per_channel = tmp;
+                            ui.checkBox_2->setChecked(false);
                             updated = true;
                         }
                     }
                     else {
                         if (1.25 * current_per_channel < tmp && tmp < 0.75 * current_per_channel) {
                             current_per_channel = tmp;
+                            ui.checkBox_2->setChecked(false);
                             updated = true;
                         }
                     }
@@ -729,9 +769,10 @@ void MyMain::update_graph_1Hz() {
             if (updated) {
                 std::string disp_str = "Current per Channel: ";
                 disp_str = disp_str + std::to_string(current_per_channel);
-                disp_str = disp_str + "   Baseline: ";
+                disp_str = disp_str + " [pA]   Baseline: ";
                 disp_str = disp_str + std::to_string(baseline);
-                //this->displayInfo(disp_str.c_str());
+                disp_str = disp_str + " [pA]";
+                this->displayInfo(disp_str.c_str());
             }
 
         }
@@ -749,8 +790,8 @@ void MyMain::update_graph_1Hz() {
         if (!rupture_flag) {
             if (maxOpenNumber != 0) {
                 opProb = 1 - pow(zero_num / double(SAMPLE_FREQ), 1.0 / maxOpenNumber);
-                if (opProb < 0.01) opProb = 0.01;
-                if (opProb > 0.99) opProb = 0.99;
+                if (opProb < 0.001) opProb = 0.001;
+                if (opProb > 0.999) opProb = 0.999;
             }
         }
 
@@ -786,13 +827,23 @@ void MyMain::update_graph_1Hz() {
                 stimuli = -28.3978081 + log(opProb / (1 - opProb)) / 0.070469599;
                 fopen_s(&fp, myFileName_processed.c_str(), "a");
                 if (fp) {
-                    fprintf(fp, "%d,%lf,%lf\n", nowTime, opProb, stimuli);
+                    fprintf(fp, "%d,%lf,%lf,%d\n", nowTime, opProb, stimuli, bias_voltage_user_specified);
                 }
             }
             else {
-                fopen_s(&fp, myFileName_processed.c_str(), "a");
-                if (fp) {
-                    fprintf(fp, "%d,#N/A,#N/A\n", nowTime);
+                if (bias_voltage_user_specified == 0) {
+                    // 0 V applied
+                    fopen_s(&fp, myFileName_processed.c_str(), "a");
+                    if (fp) {
+                        fprintf(fp, "%d,#N/A,#N/A,0\n", nowTime);
+                    }
+                }
+                else {
+                    // The transition between two different voltages
+                    fopen_s(&fp, myFileName_processed.c_str(), "a");
+                    if (fp) {
+                        fprintf(fp, "%d,#N/A,#N/A,#N/A\n", nowTime);
+                    }
                 }
             }
             break;

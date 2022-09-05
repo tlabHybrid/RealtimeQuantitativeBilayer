@@ -505,7 +505,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>670</x>
      <y>100</y>
-     <width>381</width>
+     <width>311</width>
      <height>21</height>
     </rect>
    </property>
@@ -580,7 +580,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>670</x>
      <y>130</y>
-     <width>381</width>
+     <width>351</width>
      <height>21</height>
     </rect>
    </property>
@@ -593,7 +593,7 @@ p, li { white-space: pre-wrap; }
     <string>Enable CONDUCTANCE correction</string>
    </property>
    <property name="checked">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
   </widget>
   <widget class="QGroupBox" name="groupBox_3">

@@ -11,6 +11,9 @@
 QVector<double> localTimeStamp;
 QVector<double> localCurrentData;
 
+QVector<double> localTime_VolChange;
+QVector<int> localValue_VolChange;
+
 // Specify the target file, conduct some preprocessing (like dropping headers), and record all data to local variables. 
 // extension: 0 = ATF, 1 = CSV
 int setupLocal(MyMain* mainwindow, int extension, bool isSeconds, double* dataStartTime) {
@@ -65,11 +68,32 @@ int setupLocal(MyMain* mainwindow, int extension, bool isSeconds, double* dataSt
     *dataStartTime = localTimeStamp.at(0);
 
     file.close();
+
+    // Test cde for voltage changing function.
+    localTime_VolChange.clear();
+    localValue_VolChange.clear();
+    if (filename.endsWith("BK_mimura_VoltageChanging.atf", Qt::CaseInsensitive) == true) {
+        localTime_VolChange.append(1370.4);       localValue_VolChange.append(0);
+        localTime_VolChange.append(1380.8);       localValue_VolChange.append(+30);
+        localTime_VolChange.append(1428.4);       localValue_VolChange.append(0);
+        localTime_VolChange.append(1438.2);       localValue_VolChange.append(-20);
+        localTime_VolChange.append(1468.4);       localValue_VolChange.append(-40);
+        localTime_VolChange.append(1498.4);       localValue_VolChange.append(-60);
+        localTime_VolChange.append(1529.2);       localValue_VolChange.append(0);
+        localTime_VolChange.append(1538.6);       localValue_VolChange.append(+20);
+        localTime_VolChange.append(1568.9);       localValue_VolChange.append(+40);
+        localTime_VolChange.append(1598.2);       localValue_VolChange.append(+60);
+    }
+
+
+
     return 0;
 }
 
 
 // Conduct the acquisition from the file.
+// If the returning value == -1, it means the required data is out of range from the local file.
+// If the value is != 1, but != 1, it indicates that the local file reads "the bias voltage changes to [the value] at this time step".
 int readLocal(double* timestamp, double* destination, int dataIndex_loop_num) {
 
     // Check if the data is out of range from the file or not.
@@ -80,6 +104,15 @@ int readLocal(double* timestamp, double* destination, int dataIndex_loop_num) {
         timestamp[idx] = localTimeStamp.at(idx + dataIndex_loop_num * SAMPLE_FREQ);
         destination[idx] = localCurrentData.at(idx + dataIndex_loop_num * SAMPLE_FREQ);
     }
-    return 0;
+
+    // Specify the changing of bias voltage if applicable.
+    if (localTime_VolChange.isEmpty() == false) {
+        for (int i = 0; i < localTime_VolChange.size(); i++) {
+            if (timestamp[0] <= localTime_VolChange.at(i) && localTime_VolChange.at(i) < timestamp[SAMPLE_FREQ - 1]) {
+                return localValue_VolChange.at(i);
+            }
+        }
+    }
+    return 1;
 }
 
