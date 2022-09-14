@@ -23,21 +23,37 @@ void subWin::changeFontColor(int num) {
 		ui.label->setStyleSheet("QLabel { color : black; }");
 		ui.label_2->setStyleSheet("QLabel { color : black; }");
 		ui.label_3->setStyleSheet("QLabel { color : black; }");
+		ui.label_4->setStyleSheet("QLabel { color : black; }");
+		ui.label_5->setStyleSheet("QLabel { color : black; }");
 	}
 	else if (num == 1) {
 		ui.label->setStyleSheet("QLabel { color : gray; }");
 		ui.label_2->setStyleSheet("QLabel { color : gray; }");
 		ui.label_3->setStyleSheet("QLabel { color : gray; }");
+		ui.label_4->setStyleSheet("QLabel { color : gray; }");
+		ui.label_5->setStyleSheet("QLabel { color : gray; }");
 	}
 	else if (num == 2) {
 		ui.label->setStyleSheet("QLabel { color : red; }");
 		ui.label_2->setStyleSheet("QLabel { color : red; }");
 		ui.label_3->setStyleSheet("QLabel { color : red; }");
+		ui.label_4->setStyleSheet("QLabel { color : red; }");
+		ui.label_5->setStyleSheet("QLabel { color : red; }");
 	}
 	
 }
 
-void subWin::changeString(const char* str) {
-	ui.label_2->setText(str);
-	ui.label_2->setAlignment(Qt::AlignRight);
+void subWin::changeString(int num, const char* str) {
+	if (num == 0) {
+		ui.label_2->setText(str);
+		ui.label_2->setAlignment(Qt::AlignRight);
+	}
+	else if (num == 1) {
+		ui.label_4->setText(str);
+		ui.label_4->setAlignment(Qt::AlignRight);
+	}
+	else if (num == 2) {
+		ui.label_5->setText(str);
+		ui.label_5->setAlignment(Qt::AlignRight);
+	}
 }

@@ -11,7 +11,7 @@ public:
 	subWin(QWidget *parent = nullptr);
 	~subWin();
 	void changeFontColor(int num);  // 0:black, 1: gray, 2: red
-	void changeString(const char* str);
+	void changeString(int num, const char* str);  // 0: main, 1: upper, 2: lower
 
 private:
 	Ui::subWinClass ui;

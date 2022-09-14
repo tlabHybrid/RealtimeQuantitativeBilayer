@@ -27,9 +27,13 @@
 // Important variables
 int dataSource = 1;             // The source where the current is acquired from.  0: Amplifier, 1: Local ATF, 2: Local CSV
 int proteinType = 0;            // The type of target membrane protein.  0: Nanopores (AHL), 1: Ion channels (BK), 2: Ion channels (OR8)
+int BKstimuli = 0;              // The type of stimuli, which will be estimated by BK signals.  0: Membrane voltage, 1: Verapamil inhibition.
 int postprocessType = 0;        // The type of postprocessing. 0: None, 1: Measuring conductance, 2: Emphasis when exceeding threshold
 double opProb = 0;              // The open probability of this 1 s signal.
 double stimuli = 0;             // The estimated stimuli, which leads to the predetermined opProb.
+double stimuli_upper = 0;
+double stimuli_lower = 0;
+QVector<double> stimuli_ALLaverage;
 
 // Variables for calling 1 Hz callback
 int dataIndex_loop_num = -2;     // The number of loops from the time when "Acquire" button is pushed.  -2 : reset signal
@@ -62,6 +66,8 @@ MyMain::MyMain(QWidget *parent)
     ui.pushButton_7->setIcon(style.standardIcon(QStyle::SP_BrowserReload));
     ui.comboBox->addItem("s");
     ui.comboBox->addItem("ms");
+    ui.comboBox_2->addItem("Voltage");
+    ui.comboBox_2->addItem("Inhibitor");
     ui.spinBox->setMinimum(-200);
     ui.spinBox->setMaximum(200);
     setupSerial(this);
@@ -141,13 +147,22 @@ void MyMain::on_pushBtnClicked() {
         bias_voltage_user_specified = -40;   // [mV]
         ui.textBrowser_2->setEnabled(true);
         ui.textBrowser_3->setEnabled(true);
-        ui.textBrowser_4->setText(QString::fromLocal8Bit("Estimated Membrane Potential"));
-        ui.textBrowser_4->setAlignment(Qt::AlignCenter);
         ui.textBrowser_5->setEnabled(true);
         ui.textBrowser_6->setEnabled(true);
-        ui.textBrowser_6->setText(QString::fromLocal8Bit("mV"));
-        ui.textBrowser_6->setAlignment(Qt::AlignCenter);
         proteinType = 1;
+        BKstimuli = ui.comboBox_2->currentIndex();
+        if (BKstimuli == 0) {
+            ui.textBrowser_4->setText(QString::fromLocal8Bit("Estimated Membrane Potential"));
+            ui.textBrowser_4->setAlignment(Qt::AlignCenter);
+            ui.textBrowser_6->setText(QString::fromLocal8Bit("mV"));
+            ui.textBrowser_6->setAlignment(Qt::AlignCenter);
+        }
+        else if (BKstimuli == 1) {
+            ui.textBrowser_4->setText(QString::fromLocal8Bit("Estimated Verapamil Concentration"));
+            ui.textBrowser_4->setAlignment(Qt::AlignCenter);
+            ui.textBrowser_6->setText(QString::fromLocal8Bit("uM"));
+            ui.textBrowser_6->setAlignment(Qt::AlignCenter);
+        }
     }
     /*
     else if (ui.radioButton_6->isChecked()) {
@@ -275,6 +290,7 @@ void MyMain::on_spinBoxChanged(int value) {
     if (corrections_user_specified[1] == true) {
         ui.checkBox_2->setChecked(true);
     }
+    stimuli_ALLaverage.clear();
 }
 
 // ********************************************************************************************************
@@ -414,7 +430,12 @@ void MyMain::start_graphs() {
     case 1:
         fopen_s(&fp, myFileName_processed.c_str(), "w");
         if (fp) {
-            fprintf(fp, "time [s],opProb,estimatedVoltage [mV],appliedVoltage [mV]\n");
+            if (BKstimuli == 0) {
+                fprintf(fp, "time [s],opProb,estimatedVoltage [mV],estimatedVoltage_upper [mV],estimatedVoltage_lower [mV],estimatedVoltage_ALLaverage [mV],appliedVoltage [mV]\n");
+            }
+            else if (BKstimuli == 1) {
+                fprintf(fp, "time [s],opProb,estimatedVerapamil [uM],estimatedVerapamil_upper [uM],estimatedVerapamil_lower [uM],estimatedVerapamil_ALLaverage [uM]\n");
+            }
             fclose(fp);
         }
         break;
@@ -817,32 +838,62 @@ void MyMain::update_graph_1Hz() {
             }
             break;
         case 1:
-            // if BK, estimate the applied voltage
-            // Given the data of pig-BK, 250mM KCl, 100 uM CaCl2 [20220427_BK channel_mV 変化.abf],
-            // we can estimate the stimuli(x) from the open probability (p) by applying sigmoidal function.
-            // p = 1 / (1 + exp(-a*(x-x0)))
-            // x = x0 + ln(p/(1-p))/a
-            // According to Excel solver, a = 0.070469599, x0 = -28.3978081 
+            // if BK, estimate the applied voltage or the applied inhibitor concentration
             if (opProb > 0 && !rupture_flag) {
-                stimuli = -28.3978081 + log(opProb / (1 - opProb)) / 0.070469599;
-                fopen_s(&fp, myFileName_processed.c_str(), "a");
-                if (fp) {
-                    fprintf(fp, "%d,%lf,%lf,%d\n", nowTime, opProb, stimuli, bias_voltage_user_specified);
+                if (BKstimuli == 0) {
+                    // Given the data of pig-BK, 250mM KCl, 100 uM CaCl2 [20220427_BK channel_mV 変化.abf],
+                    // we can estimate the stimuli(x) from the open probability (p) by applying sigmoidal function.
+                    // p = 1 / (1 + exp(-a*(x-x0)))
+                    // x = x0 + ln(p/(1-p))/a
+                    // According to Excel solver, a = 0.070469599, x0 = -28.3978081   (old version)
+                    // [New version]    a = 0.076469, x0 = -37.8402  [lower]
+                    //                  a = 0.0625493343322725, x0 = -26.0010643562768  [center]
+                    //                  a = 0.066644, x0 = -13.32    [upper]
+                    // 
+                    //stimuli = -28.3978081 + log(opProb / (1 - opProb)) / 0.070469599;
+                    stimuli = -26.0010643562768 + log(opProb / (1 - opProb)) / 0.0625493343322725;
+                    stimuli_lower = -37.8402 + log(opProb / (1 - opProb)) / 0.076469;
+                    stimuli_upper = -13.32 + log(opProb / (1 - opProb)) / 0.066644;
+                    stimuli_ALLaverage.append(stimuli);
+                    double sum = 0;
+                    for (int i = 0; i < stimuli_ALLaverage.size(); i++) sum += stimuli_ALLaverage.at(i);
+                    double average = sum / stimuli_ALLaverage.size();
+
+                    fopen_s(&fp, myFileName_processed.c_str(), "a");
+                    if (fp) {
+                        fprintf(fp, "%d,%lf,%lf,%lf,%lf,%lf,%d\n", nowTime, opProb, stimuli, stimuli_upper, stimuli_lower, average, bias_voltage_user_specified);
+                    }
+                }
+                else if (BKstimuli == 1) {
+                    // Given the data of pig-BK, 250mM KCl, 2mM CaCl2 [220627 Verapamil - BK.xlsx],
+                    // we can estimate the applied verapamil concentration (x) from the open probability (p) by applying sigmoidal function.
+                    // NOTE: x' = log10(x [µM]) ... 1 nM = -3, 1 µM = 0, 1 mM = 3.
+                    stimuli = 0;
+                    stimuli_lower = 0;
+                    stimuli_upper = 0;
+                    stimuli_ALLaverage.append(stimuli);
+                    double sum = 0;
+                    for (int i = 0; i < stimuli_ALLaverage.size(); i++) sum += stimuli_ALLaverage.at(i);
+                    double average = sum / stimuli_ALLaverage.size();
+
+                    fopen_s(&fp, myFileName_processed.c_str(), "a");
+                    if (fp) {
+                        fprintf(fp, "%d,%lf,%lf,%lf,%lf,%lf\n", nowTime, opProb, stimuli, stimuli_upper, stimuli_lower, average);
+                    }
                 }
             }
             else {
-                if (bias_voltage_user_specified == 0) {
-                    // 0 V applied
+                // 0 V applied, or the moment when openNumber happens to be zero, or the transition between two different voltages (maxOpenNumber will be -1)
+                if (BKstimuli == 0) {
                     fopen_s(&fp, myFileName_processed.c_str(), "a");
                     if (fp) {
-                        fprintf(fp, "%d,#N/A,#N/A,0\n", nowTime);
+                        fprintf(fp, "%d,#N/A,#N/A,#N/A,#N/A,#N/A,%d\n", nowTime, bias_voltage_user_specified);
                     }
                 }
-                else {
-                    // The transition between two different voltages
+                else if (BKstimuli == 1) {
                     fopen_s(&fp, myFileName_processed.c_str(), "a");
                     if (fp) {
-                        fprintf(fp, "%d,#N/A,#N/A,#N/A\n", nowTime);
+                        fprintf(fp, "%d,#N/A,#N/A,#N/A,#N/A,#N/A\n", nowTime);
                     }
                 }
             }
@@ -961,7 +1012,9 @@ void MyMain::update_graph_1Hz() {
             if (!rupture_flag) {
                 if (postprocessType == 2) {
                     // Emphasis the threshold exceeding by wireless communication.
-                    subWindow->changeString(std::to_string(int(round(stimuli))).c_str());
+                    subWindow->changeString(0, std::to_string(int(round(stimuli))).c_str());
+                    subWindow->changeString(1, std::to_string(int(round(stimuli_upper))).c_str());
+                    subWindow->changeString(2, std::to_string(int(round(stimuli_lower))).c_str());
                     if (stimuli > 0) {
                         subWindow->changeFontColor(2);
                     }
@@ -973,7 +1026,9 @@ void MyMain::update_graph_1Hz() {
             else {
                 if (postprocessType == 2) {
                     // Emphasis the threshold exceeding by wireless communication.
-                    subWindow->changeString("[XX]");
+                    subWindow->changeString(0, "[XX]");
+                    subWindow->changeString(1, "[XX]");
+                    subWindow->changeString(2, "[XX]");
                     subWindow->changeFontColor(1);
                 }
             }
@@ -1036,6 +1091,7 @@ void MyMain::update_graph_1Hz() {
         }
         ui.customPlot->replot();
         ui.customPlot_2->replot();
+        
 
 
         // Updating the calculated features (opProb and stimuli)
@@ -1058,8 +1114,6 @@ void MyMain::update_graph_1Hz() {
                     ui.textBrowser_2->setAlignment(Qt::AlignCenter);
                     ui.textBrowser_5->setText(QString::fromLocal8Bit(std::to_string(int(round(stimuli))).c_str()));
                     ui.textBrowser_5->setAlignment(Qt::AlignCenter);
-                    ui.textBrowser_6->setText(QString::fromLocal8Bit("mV"));
-                    ui.textBrowser_6->setAlignment(Qt::AlignCenter);
                 }
                 break;
             case 2:

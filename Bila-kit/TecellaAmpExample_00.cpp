@@ -153,16 +153,16 @@ void setup_source_and_gain(TECELLA_HNDL h)
 void setup_auto_compensation(TECELLA_HNDL h)
 {
 	// Calibrates the amplifier.
-	wprintf(L"\nRunning internal calibration...\n");
-	tecella_calibrate_all(h);
+	//wprintf(L"\nRunning internal calibration...\n");
+	//tecella_calibrate_all(h);
 
 	//Compensating individual channels isn't supported yet,
 	// so we don't pass in a channel array here.
-	wprintf(L"\nRunning Auto Offset...\n");
-	tecella_auto_offset(h);
+	//wprintf(L"\nRunning Auto Offset...\n");
+	//tecella_auto_offset(h);
 
-	wprintf(L"\nRunning Auto Compensation...\n");
-	tecella_auto_comp(h);
+	//wprintf(L"\nRunning Auto Compensation...\n");
+	//tecella_auto_comp(h);
 
 	int channel = 0;
 	wprintf(L"\tResults for channel %d:\n", channel + 1);
