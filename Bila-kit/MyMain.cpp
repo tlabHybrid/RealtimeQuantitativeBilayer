@@ -47,6 +47,7 @@ double current_per_channel = 0.0;     // Current per single channel [pA]. Equal 
 double conductance_user_specified = 0.0;        // User input of conductance [nS] per channel.
 int bias_voltage_user_specified = 50;           // User input of bias voltage [mV].
 double baseline = 0.0;          // The baseline currents. Equal to the mean current when all channels are closed (lastOpenNumber == 0). 
+double baseline_user_specified = 0.0;           // User input of baseline [pA].
 bool rupture_flag = false;      // Indicates whether the bilayer is ruptured during the measuring period (1s). 
 bool recovery_flag = false;     // Indicates whether the bilayer is recovering from rupture during the measuring period (1s)
 int lastOpenNumber = 0;
@@ -213,10 +214,19 @@ void MyMain::on_pushBtnClicked() {
     }
     current_per_channel = conductance_user_specified * (double)bias_voltage_user_specified;  // [pA]
     ui.spinBox->setValue(bias_voltage_user_specified);
-    baseline = 0;
+
+    baseline_user_specified = 0.0;
+    double d3 = QInputDialog::getDouble(this, "QInputDialog::getDouble()",
+        "Do you want to modify the baseline [pA]?", baseline_user_specified, -50, 50, 3, &ok,
+        Qt::WindowFlags(), 0.5);
+    if (ok) {
+        baseline_user_specified = d3;
+    }
 
     std::string disp_str = "Current per Channel: ";
     disp_str = disp_str + std::to_string(current_per_channel);
+    disp_str = disp_str + " [pA], Baseline: ";
+    disp_str = disp_str + std::to_string(baseline_user_specified);
     disp_str = disp_str + " [pA]";
     this->displayInfo(disp_str.c_str());
     disp_str = "Conductance: ";
@@ -284,7 +294,7 @@ void MyMain::on_spinBoxChanged(int value) {
 
     // If necessary, automatically conducts baseline/conductance correction.
     if (corrections_user_specified[0] == true) {
-        baseline = 0;
+        baseline = baseline_user_specified;
         ui.checkBox->setChecked(true);
     }
     if (corrections_user_specified[1] == true) {
@@ -504,7 +514,7 @@ void MyMain::update_graph_1Hz() {
         number_of_channel = -1;
         prev_num_channels = -1;
         current_per_channel = conductance_user_specified * (double)bias_voltage_user_specified;  // [pA]
-        baseline = 0;
+        baseline = baseline_user_specified;
         rupture_flag = false;
         recovery_flag = false;
         on_detection = 0;
