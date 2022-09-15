@@ -74,6 +74,9 @@
    </property>
   </widget>
   <widget class="QLabel" name="label_4">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>290</x>

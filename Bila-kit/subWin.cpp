@@ -56,4 +56,12 @@ void subWin::changeString(int num, const char* str) {
 		ui.label_5->setText(str);
 		ui.label_5->setAlignment(Qt::AlignRight);
 	}
+	else if (num == 3) {
+		ui.label->setText(str);
+		ui.label->setAlignment(Qt::AlignCenter);
+	}
+	else if (num == 4) {
+		ui.label_3->setText(str);
+		ui.label_3->setAlignment(Qt::AlignLeft);
+	}
 }

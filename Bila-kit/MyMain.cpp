@@ -145,7 +145,6 @@ void MyMain::on_pushBtnClicked() {
         // Perhaps in the future, this option will be changed to "Ion channels" altogether with the below option.
         displayInfo("Protein: Big Potassium (BK) ion channel from Pig");
         conductance_user_specified = 0.285;  // [nS]
-        bias_voltage_user_specified = -40;   // [mV]
         ui.textBrowser_2->setEnabled(true);
         ui.textBrowser_3->setEnabled(true);
         ui.textBrowser_5->setEnabled(true);
@@ -153,12 +152,14 @@ void MyMain::on_pushBtnClicked() {
         proteinType = 1;
         BKstimuli = ui.comboBox_2->currentIndex();
         if (BKstimuli == 0) {
+            bias_voltage_user_specified = -40;   // [mV]
             ui.textBrowser_4->setText(QString::fromLocal8Bit("Estimated Membrane Potential"));
             ui.textBrowser_4->setAlignment(Qt::AlignCenter);
             ui.textBrowser_6->setText(QString::fromLocal8Bit("mV"));
             ui.textBrowser_6->setAlignment(Qt::AlignCenter);
         }
         else if (BKstimuli == 1) {
+            bias_voltage_user_specified = 30;   // [mV]
             ui.textBrowser_4->setText(QString::fromLocal8Bit("Estimated Verapamil Concentration"));
             ui.textBrowser_4->setAlignment(Qt::AlignCenter);
             ui.textBrowser_6->setText(QString::fromLocal8Bit("uM"));
@@ -242,6 +243,10 @@ void MyMain::on_pushBtnClicked() {
         subWindow->setWindowFlags(Qt::Window);
         subWindow->show();
         subWindow->changeFontColor(1);
+        if (BKstimuli == 1) {
+            subWindow->changeString(3, "[Verapamil] is now");
+            subWindow->changeString(4, "uM");
+        }
     }
 
 
@@ -690,6 +695,16 @@ void MyMain::update_graph_1Hz() {
                     rupture_flag = true;
                     break;
                 }
+                // IF the target is inhibitor concentration sensing, we expect that there is only a single channel during sensing.
+                // (i.e. "Fix to the single channel" checkbox is checked)
+                // Under this assumption, we can additionally assume that the Faraday cage is open when the current > 30 pA.
+                // NOTE: This value is heuristic, and was obtained by observing the raw current.
+                double BKstimuliONE_threshold2 = 30;
+                if(BKstimuli == 1 && y_now > BKstimuliONE_threshold2) {
+                    rupture_flag = true; 
+                    stimuli_ALLaverage.clear();
+                    break;
+                }
                 //*******
                 // Open/close determination for each timestep
                 if (!rupture_flag) {
@@ -877,10 +892,21 @@ void MyMain::update_graph_1Hz() {
                 else if (BKstimuli == 1) {
                     // Given the data of pig-BK, 250mM KCl, 2mM CaCl2 [220627 Verapamil - BK.xlsx],
                     // we can estimate the applied verapamil concentration (x) from the open probability (p) by applying sigmoidal function.
-                    // NOTE: x' = log10(x [µM]) ... 1 nM = -3, 1 µM = 0, 1 mM = 3.
-                    stimuli = 0;
-                    stimuli_lower = 0;
-                    stimuli_upper = 0;
+                    // x' = log10(x [µM]) ... 1 nM = -3, 1 µM = 0, 1 mM = 3.
+                    // p = 1 / (1 + exp(-a*(x'-x'0)))
+                    // x' = x'0 + ln(p/(1-p))/a
+                    // x [uM] = exp10(x'0 + ln(p/(1-p))/a)
+                    // According to Excel solver; 
+                    //   [middle]  a = -0.992555977372338, x'0 = 1.37761700241996 
+                    //   [upper]   a = (same), x'0 = 2.09910501672377 
+                    //   [lower]   a = (same), x'0 = 0.371686045017188
+                    //  
+                    // If x < 0.01, it will be much better that we use [nM].
+                    // If x > 1000, it will be much better that we use [mM].
+
+                    stimuli = pow(10, 1.37761700241996 + log(opProb / (1 - opProb)) / -0.992555977372338);
+                    stimuli_lower = pow(10, 0.371686045017188 + log(opProb / (1 - opProb)) / -0.992555977372338);
+                    stimuli_upper = pow(10, 2.09910501672377 + log(opProb / (1 - opProb)) / -0.992555977372338);
                     stimuli_ALLaverage.append(stimuli);
                     double sum = 0;
                     for (int i = 0; i < stimuli_ALLaverage.size(); i++) sum += stimuli_ALLaverage.at(i);
@@ -1019,7 +1045,7 @@ void MyMain::update_graph_1Hz() {
             break;
         case 1:
             // if BK, the only option available for now is to emphasize the threshold exceeding by wireless communication.
-            if (!rupture_flag) {
+            if (!rupture_flag && opProb >= 0) {
                 if (postprocessType == 2) {
                     // Emphasis the threshold exceeding by wireless communication.
                     subWindow->changeString(0, std::to_string(int(round(stimuli))).c_str());

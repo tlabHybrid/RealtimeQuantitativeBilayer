@@ -64,5 +64,5 @@ int finalizeAmplifier() {
 // (Re)set the value for membrane holding voltage.  Input example: 50 -> 50 mV.
 void changeVoltageAmplifier(int value) {
 	double voltage = value * 0.001;
-	tecella_stimulus_set_hold(h, voltage);
+	setup_stimulus(h, voltage);
 }

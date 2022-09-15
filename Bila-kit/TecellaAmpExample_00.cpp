@@ -216,16 +216,16 @@ void setup_auto_compensation(TECELLA_HNDL h)
 
 
 	// Bug fix.  Somehow, the offset values are not well set by the auto_comp functions. 
-	// Manually set the value to 5 mV.
+	// Disable the offset settings. 
 	tecella_get_reg_props(h, TECELLA_REG_JP, &reg_props);
 	if (reg_props.supported) {
-		tecella_chan_set(h, TECELLA_REG_JP, channel, 6.0);
+		tecella_chan_set(h, TECELLA_REG_JP, channel, 0.0);
 		tecella_chan_get(h, TECELLA_REG_JP, channel, &value);
 		wprintf(L"\t%s: %lf %s\n", reg_props.label, value, reg_props.units);
 	}
 	tecella_get_reg_props(h, TECELLA_REG_JP_FINE, &reg_props);
 	if (reg_props.supported) {
-		tecella_chan_set(h, TECELLA_REG_JP_FINE, channel, -1.0);
+		tecella_chan_set(h, TECELLA_REG_JP_FINE, channel, 0.0);
 		tecella_chan_get(h, TECELLA_REG_JP_FINE, channel, &value);
 		wprintf(L"\t%s: %lf %s\n", reg_props.label, value, reg_props.units);
 	}
@@ -276,11 +276,11 @@ void setup_per_channel_settings(TECELLA_HNDL h)
 
 
 /******************************************************************************
-* Stimulus  - Modified (set the hold stimulus value to 50 mV.)
+* Stimulus  - Modified (set the hold stimulus value to the specified value.)
 ******************************************************************************/
 // This function shows how to program the stimulus for both
 // single stimulus systems and multi stimulus systems.
-void setup_stimulus(TECELLA_HNDL h)
+void setup_stimulus(TECELLA_HNDL h, double voltage)
 {
 	TECELLA_HW_PROPS hw_props;
 	tecella_get_hw_props(h, &hw_props);
@@ -288,7 +288,7 @@ void setup_stimulus(TECELLA_HNDL h)
 	wprintf(L"\nSetting up the stimuli...\n");
 
 	int channel = 0; 
-	double voltage = 50e-3;
+	//double voltage = 50e-3;
 	tecella_stimulus_set_hold(h, voltage);
 	
 	//wprintf(L"\nSetting up the software filter...\n");
@@ -298,9 +298,9 @@ void setup_stimulus(TECELLA_HNDL h)
 	//Create a stimulus
 	const int SEGMENT_COUNT = 3;
 	TECELLA_STIMULUS_SEGMENT stimulus[SEGMENT_COUNT] = {
-		{TECELLA_STIMULUS_SEGMENT_SET, 50e-3, 0, 250e-3, 0},   //50 milliVolts, 250ms (.25 seconds)
-		{TECELLA_STIMULUS_SEGMENT_SET, 50e-3, 0, 500e-3, 0},   //50 milliVolts, 500ms (.5 seconds)
-		{TECELLA_STIMULUS_SEGMENT_SET, 50e-3, 0, 250e-3, 0},   //50 milliVolts, 250ms (.25 seconds)
+		{TECELLA_STIMULUS_SEGMENT_SET, voltage, 0, 250e-3, 0},   //50 milliVolts, 250ms (.25 seconds)
+		{TECELLA_STIMULUS_SEGMENT_SET, voltage, 0, 500e-3, 0},   //50 milliVolts, 500ms (.5 seconds)
+		{TECELLA_STIMULUS_SEGMENT_SET, voltage, 0, 250e-3, 0},   //50 milliVolts, 250ms (.25 seconds)
 	};
 
 	//Program all available stimuli
@@ -317,7 +317,7 @@ void setup_stimulus(TECELLA_HNDL h)
 		wprintf(L"\t            stimulus %d is a %lf V pulse in reality.\n", i + 1, stimulus[1].value);
 
 		//make it such that the stimulus are different.
-		stimulus[1].value += 10e-3;
+		//stimulus[1].value += 10e-3;
 	}
 }
 
