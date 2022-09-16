@@ -626,14 +626,14 @@ void MyMain::update_graph_1Hz() {
                         if (current_per_channel > 0.1 && idx >= 1) {   // Positive bias voltage
                             if (filteredData[idx - 1] > filteredData[idx]) {
                                 lastOpenNumber++;
-                                if (ui.checkBox_3->isChecked() && lastOpenNumber > 1) lastOpenNumber = 1;
+                                if (ui.checkBox_3->isChecked() && lastOpenNumber > ui.spinBox_2->value()) lastOpenNumber = ui.spinBox_2->value();
                                 on_detection = 3;
                             }
                         }
                         else if (current_per_channel < -0.1 && idx >= 1) {
                             if (filteredData[idx - 1] < filteredData[idx]) {
                                 lastOpenNumber++;
-                                if (ui.checkBox_3->isChecked() && lastOpenNumber > 1) lastOpenNumber = 1;
+                                if (ui.checkBox_3->isChecked() && lastOpenNumber > ui.spinBox_2->value()) lastOpenNumber = ui.spinBox_2->value();
                                 on_detection = 3;
                             }
 
@@ -699,7 +699,7 @@ void MyMain::update_graph_1Hz() {
                 // (i.e. "Fix to the single channel" checkbox is checked)
                 // Under this assumption, we can additionally assume that the Faraday cage is open when the current > 30 pA.
                 // NOTE: This value is heuristic, and was obtained by observing the raw current.
-                double BKstimuliONE_threshold2 = 30;
+                double BKstimuliONE_threshold2 = 60;
                 if(BKstimuli == 1 && y_now > BKstimuliONE_threshold2) {
                     rupture_flag = true; 
                     stimuli_ALLaverage.clear();
@@ -711,7 +711,7 @@ void MyMain::update_graph_1Hz() {
                     if (current_per_channel > 0.1) {   // Positive bias voltage
                         if (y_now > (lastOpenNumber + threshold) * current_per_channel + baseline) {
                             lastOpenNumber++;
-                            if (ui.checkBox_3->isChecked() && lastOpenNumber > 1) lastOpenNumber = 1;
+                            if (ui.checkBox_3->isChecked() && lastOpenNumber > ui.spinBox_2->value()) lastOpenNumber = ui.spinBox_2->value(); // DEBUG
                         }
                         else if (y_now < (lastOpenNumber - threshold) * current_per_channel + baseline) {
                             lastOpenNumber--;
@@ -721,7 +721,7 @@ void MyMain::update_graph_1Hz() {
                     else if (current_per_channel < -0.1) {  // Negative bias voltage
                         if (y_now < (lastOpenNumber + threshold) * current_per_channel + baseline) {
                             lastOpenNumber++;
-                            if (ui.checkBox_3->isChecked() && lastOpenNumber > 1) lastOpenNumber = 1;
+                            if (ui.checkBox_3->isChecked() && lastOpenNumber > ui.spinBox_2->value()) lastOpenNumber = ui.spinBox_2->value();
                         }
                         else if (y_now > (lastOpenNumber - threshold) * current_per_channel + baseline) {
                             lastOpenNumber--;
@@ -745,33 +745,35 @@ void MyMain::update_graph_1Hz() {
                 recovery_flag = true;
             }
         }
-        if (maxOpenNumber >= 2 && processedData[SAMPLE_FREQ - 1] == 0) { // Bug fixing
+        if (proteinType == 0 && maxOpenNumber >= 2 && processedData[SAMPLE_FREQ - 1] == 0) { // Bug fixing
             rupture_flag = true;
             recovery_flag = true;
         }
 
         // Baseline correction
-        int zero_num = 0;
+        int num_channels[3] = {};  // If the open channels = 0, 1, or 2, the range will be used for Po calculation.
         if (!rupture_flag && !recovery_flag) {
             double zero_value = 0;
             double one_value = 0;
-            int one_num = 0;
             bool updated = false;
 
             for (int idx = 0; idx < SAMPLE_FREQ; idx++) {
                 if (processedData[idx] == 0) {
                     zero_value += currentData[idx];
-                    zero_num += 1;
+                    num_channels[0] += 1;
                 }else if (processedData[idx] == 1) {
                     one_value += currentData[idx];
-                    one_num += 1;
+                    num_channels[1] += 1;
+                }
+                else if (processedData[idx] == 2) {
+                    num_channels[2] += 1;
                 }
             }
 
             // Update the baseline when the change is in ±50% of the single-molecule current.
             if (ui.checkBox->isChecked()) {
-                if (zero_num >= 10) { // For better stability
-                    double tmp = zero_value / zero_num;
+                if (num_channels[0] >= 10) { // For better stability
+                    double tmp = zero_value / num_channels[0];
                     if (current_per_channel > 0) {
                         if (-0.5 * current_per_channel < tmp && tmp < 0.5 * current_per_channel) {
                             // if (ui.checkBox_2->isChecked()) current_per_channel -= (tmp - baseline);
@@ -793,8 +795,8 @@ void MyMain::update_graph_1Hz() {
 
             // Update the conductance when the change is in ±25% of the single-molecule current.
             if (ui.checkBox_2->isChecked()) {
-                if (one_num >= 10) {
-                    double tmp = one_value / one_num - baseline;
+                if (num_channels[1] >= 10) {
+                    double tmp = one_value / num_channels[1] - baseline;
                     if (current_per_channel > 0) {
                         if (0.75 * current_per_channel < tmp && tmp < 1.25 * current_per_channel) {
                             current_per_channel = tmp;
@@ -834,8 +836,37 @@ void MyMain::update_graph_1Hz() {
         // if (maxOpenNumber = 0) p = 0;
         opProb = -99;    // Cannot calculate opProb when the bilayer is ruptured or maxOpenNumber = 0.
         if (!rupture_flag) {
-            if (maxOpenNumber != 0) {
-                opProb = 1 - pow(zero_num / double(SAMPLE_FREQ), 1.0 / maxOpenNumber);
+            if (maxOpenNumber == 1) {
+                opProb = num_channels[1] / double(SAMPLE_FREQ);  // Po
+                if (opProb < 0.001) opProb = 0.001;
+                if (opProb > 0.999) opProb = 0.999;
+            }
+            else if (maxOpenNumber == 2) {
+                double opProb2 = sqrt(num_channels[2] / double(SAMPLE_FREQ));  // num_channels[2] / 5kHz = Po^2
+                double opProb0 = 1 - sqrt(num_channels[0] / double(SAMPLE_FREQ)); // num_channels[0] / 5kHz = (1-Po)^2
+                double opProb1 = 0.0;
+                if(num_channels[2] >= num_channels[0]) opProb1 = (1 + sqrt(1 - 2 * num_channels[1] / double(SAMPLE_FREQ))) / 2;  // num_channels[1] / 5kHz = 2Po(1-Po)
+                else opProb1 = (1 - sqrt(1 - 2 * num_channels[1] / double(SAMPLE_FREQ))) / 2;
+                //DEBUG
+                std::cout << "Po-0:" << opProb0 << "\tPo-1:" << opProb1 << "\tPo-2:" << opProb2 << std::endl;
+                // Take the average value to estimate the real opProb. However, when a value took "0 (int)" or "1(int)", we remove it from the calculation.
+                if (opProb0 > 0.999) { // When num_channels[0] == 0
+                    opProb = (opProb1 + opProb2) / 2;
+                }
+                else if (opProb2 < 0.001) { // When num_channels[2] == 0
+                    opProb = (opProb0 + opProb1) / 2;
+                }
+                else if (num_channels[1] > 2500) { // Ideally, num[1] won't exceed 2500 in any Po. However, in reality, sometimes num[1] overflows 2500, leading opProb1 to be -infinity.
+                    opProb = (opProb0 + opProb2) / 2;
+                }
+                else {
+                    opProb = (opProb0 + opProb1 + opProb2) / 3;
+                }
+                if (opProb < 0.001) opProb = 0.001;
+                if (opProb > 0.999) opProb = 0.999;
+            }
+            else if(maxOpenNumber > 0) {
+                opProb = 1 - pow(num_channels[0] / double(SAMPLE_FREQ), 1.0 / maxOpenNumber);
                 if (opProb < 0.001) opProb = 0.001;
                 if (opProb > 0.999) opProb = 0.999;
             }

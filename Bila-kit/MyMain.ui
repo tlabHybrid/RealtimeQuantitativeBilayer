@@ -692,7 +692,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>670</x>
      <y>160</y>
-     <width>381</width>
+     <width>281</width>
      <height>21</height>
     </rect>
    </property>
@@ -702,7 +702,7 @@ p, li { white-space: pre-wrap; }
     </font>
    </property>
    <property name="text">
-    <string>Fix to SINGLE molecule</string>
+    <string>Fix the number of channels:</string>
    </property>
    <property name="checked">
     <bool>false</bool>
@@ -773,6 +773,33 @@ p, li { white-space: pre-wrap; }
     <string/>
    </property>
   </widget>
+  <widget class="QSpinBox" name="spinBox_2">
+   <property name="geometry">
+    <rect>
+     <x>950</x>
+     <y>160</y>
+     <width>41</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>13</pointsize>
+    </font>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+   <property name="keyboardTracking">
+    <bool>false</bool>
+   </property>
+   <property name="minimum">
+    <number>1</number>
+   </property>
+   <property name="maximum">
+    <number>9</number>
+   </property>
+  </widget>
   <zorder>textBrowser_11</zorder>
   <zorder>customPlot</zorder>
   <zorder>customPlot_2</zorder>
@@ -801,6 +828,7 @@ p, li { white-space: pre-wrap; }
   <zorder>checkBox_3</zorder>
   <zorder>spinBox</zorder>
   <zorder>pushButton_7</zorder>
+  <zorder>spinBox_2</zorder>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
