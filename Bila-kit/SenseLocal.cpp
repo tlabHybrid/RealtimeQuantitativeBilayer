@@ -84,6 +84,14 @@ int setupLocal(MyMain* mainwindow, int extension, bool isSeconds, double* dataSt
         localTime_VolChange.append(1568.9);       localValue_VolChange.append(+40);
         localTime_VolChange.append(1598.2);       localValue_VolChange.append(+60);
     }
+    if (filename.endsWith("20220912_BKvoltage_trimmed.atf", Qt::CaseInsensitive) == true) {
+        localTime_VolChange.append(711.9);       localValue_VolChange.append(0);
+        localTime_VolChange.append(727.9);       localValue_VolChange.append(+30);
+        localTime_VolChange.append(840.1);       localValue_VolChange.append(+60);
+        localTime_VolChange.append(855.4);       localValue_VolChange.append(-30);
+        localTime_VolChange.append(870.1);       localValue_VolChange.append(-60);
+        localTime_VolChange.append(882.4);       localValue_VolChange.append(+30);
+    }
 
 
 

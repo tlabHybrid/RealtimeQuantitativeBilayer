@@ -10,6 +10,7 @@
 // prevX[500] : signal at previous timestep (for padding).
 // Y[SAMPLE_FREQ] : filtered signal
 const int kernel_size = 301;
+//const int kernel_size = 101;
 void convolve_EDGE(double* X, double* Y, double* prevX, int prevX_size) {
     
     // Filter preparation

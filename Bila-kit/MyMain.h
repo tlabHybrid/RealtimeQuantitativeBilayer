@@ -39,6 +39,10 @@ private slots:
     void on_pushBtn6Clicked();
     void on_pushBtn7Clicked();
     void on_spinBoxChanged(int value);
+    void on_pushBtn10Clicked();
+    void on_pushBtn11Clicked();
+    void on_pushBtn12Clicked();
+    void on_pushBtn13Clicked();
 
     // Main function (1 Hz callback)
     void update_graph_1Hz();

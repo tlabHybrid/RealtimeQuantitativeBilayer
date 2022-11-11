@@ -711,8 +711,8 @@ p, li { white-space: pre-wrap; }
   <widget class="QSpinBox" name="spinBox">
    <property name="geometry">
     <rect>
-     <x>1120</x>
-     <y>150</y>
+     <x>1060</x>
+     <y>180</y>
      <width>151</width>
      <height>31</height>
     </rect>
@@ -800,6 +800,78 @@ p, li { white-space: pre-wrap; }
     <number>9</number>
    </property>
   </widget>
+  <widget class="QPushButton" name="pushButton_10">
+   <property name="geometry">
+    <rect>
+     <x>1080</x>
+     <y>140</y>
+     <width>41</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>13</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>+30</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_11">
+   <property name="geometry">
+    <rect>
+     <x>1130</x>
+     <y>140</y>
+     <width>41</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>13</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>+60</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_12">
+   <property name="geometry">
+    <rect>
+     <x>1180</x>
+     <y>140</y>
+     <width>41</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>13</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>-30</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_13">
+   <property name="geometry">
+    <rect>
+     <x>1230</x>
+     <y>140</y>
+     <width>41</width>
+     <height>28</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>13</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>-60</string>
+   </property>
+  </widget>
   <zorder>textBrowser_11</zorder>
   <zorder>customPlot</zorder>
   <zorder>customPlot_2</zorder>
@@ -829,6 +901,10 @@ p, li { white-space: pre-wrap; }
   <zorder>spinBox</zorder>
   <zorder>pushButton_7</zorder>
   <zorder>spinBox_2</zorder>
+  <zorder>pushButton_10</zorder>
+  <zorder>pushButton_11</zorder>
+  <zorder>pushButton_12</zorder>
+  <zorder>pushButton_13</zorder>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -946,8 +1022,8 @@ p, li { white-space: pre-wrap; }
    <slot>on_spinBoxChanged(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1198</x>
-     <y>172</y>
+     <x>1138</x>
+     <y>202</y>
     </hint>
     <hint type="destinationlabel">
      <x>1198</x>
@@ -971,6 +1047,70 @@ p, li { white-space: pre-wrap; }
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushButton_10</sender>
+   <signal>clicked()</signal>
+   <receiver>MyMainClass</receiver>
+   <slot>on_pushBtn10Clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1091</x>
+     <y>153</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1046</x>
+     <y>154</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_11</sender>
+   <signal>clicked()</signal>
+   <receiver>MyMainClass</receiver>
+   <slot>on_pushBtn11Clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1162</x>
+     <y>158</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1074</x>
+     <y>118</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_12</sender>
+   <signal>clicked()</signal>
+   <receiver>MyMainClass</receiver>
+   <slot>on_pushBtn12Clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1188</x>
+     <y>157</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1176</x>
+     <y>165</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_13</sender>
+   <signal>clicked()</signal>
+   <receiver>MyMainClass</receiver>
+   <slot>on_pushBtn13Clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1252</x>
+     <y>160</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1260</x>
+     <y>174</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>on_pushBtnClicked()</slot>
@@ -981,5 +1121,9 @@ p, li { white-space: pre-wrap; }
   <slot>on_pushBtn6Clicked()</slot>
   <slot>on_pushBtn7Clicked()</slot>
   <slot>on_spinBoxChanged(int)</slot>
+  <slot>on_pushBtn10Clicked()</slot>
+  <slot>on_pushBtn11Clicked()</slot>
+  <slot>on_pushBtn12Clicked()</slot>
+  <slot>on_pushBtn13Clicked()</slot>
  </slots>
 </ui>

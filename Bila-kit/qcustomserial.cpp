@@ -12,6 +12,7 @@
 #include <QtSerialPort/QSerialPortInfo>
 
 QSerialPort port;
+int serialTarget = -1; // -1: no serial, 0: Arduino, 1: Legato180
 
 
 // Function to set up the serial communication.
@@ -24,12 +25,16 @@ void setupSerial(MyMain* mainwindow)
         qDebug() << "Manufacturer: " << info_tmp.manufacturer();
         if (info_tmp.description() == "Arduino Mega 2560") {
             info = info_tmp;
+            serialTarget = 0;
+        }else if (info_tmp.manufacturer() == "Microsoft") {
+            info = info_tmp;
+            serialTarget = 1;
         }
     }
     if (info.isNull()) {
-        QMessageBox::information(mainwindow, "Info", "Arduino Mega is not connected. Continue with no serial communication.");
+        QMessageBox::information(mainwindow, "Info", "Neither Arduino Mega nor KDS LEGATO 180 is connected. Continue with no serial communication.");
     }
-    else {
+    else if (serialTarget == 0){
         port.setPort(info);
         port.setBaudRate(QSerialPort::Baud9600);
         port.setDataBits(QSerialPort::Data8);
@@ -42,6 +47,22 @@ void setupSerial(MyMain* mainwindow)
             QMessageBox::critical(mainwindow, "Error", "Couldn't open the serial port. Maybe the port is used by other software (like Serial Monitor)?");
         }
     }
+    else if (serialTarget == 1) {
+        port.setPort(info);
+        port.setBaudRate(QSerialPort::Baud115200);
+        port.setDataBits(QSerialPort::Data8);
+        port.setParity(QSerialPort::NoParity);
+        port.setStopBits(QSerialPort::OneStop);
+        if (port.open(QIODevice::ReadWrite)) {
+
+        }
+        else {
+            QMessageBox::critical(mainwindow, "Error", "Couldn't open the serial port. Maybe the port is used by other software (like Serial Monitor)?");
+        }
+    }
+    else {
+
+    }
 }
 
 // Function to send a character to Arduino MEGA by the serial communication.
@@ -53,6 +74,22 @@ void setupSerial(MyMain* mainwindow)
 void sendSerial(const char* data) {
     if (port.isOpen()) {
         port.write(data);
+    }
+}
+
+void sendSerial_pump() {
+    if (port.isOpen()) {
+        //QByteArray ba;
+        //ba.append("run");
+        //port.write(ba);
+        //QString buffer = "run\n";
+        //port.write(buffer.toStdString().c_str(), buffer.size());
+        //port.waitForBytesWritten(-1);
+        //QString data = "run\n";
+        //char* transsmit_data = data.toUtf8().data();
+        //port.write(transsmit_data);
+        //port.write("run\n");
+
     }
 }
 

@@ -9,16 +9,21 @@
 
 void conductActuationSerial(bool rupture_flag, bool recovery_flag, int number_of_channel) {
     if (!rupture_flag) {
-        if (number_of_channel >= 2) {
+        //if (number_of_channel >= 2) {
             // If more than 2 molecules are on the lipid bilayer, the processing will be much difficult. Reform it.
-            sendSerial("r\n");
-        }
+        //    sendSerial("r\n");
+        //}
     }
     else {
         if (!recovery_flag) {
             // If the bilayer is ruptured, reform it.
             // However, if the bilayer is already in process of reformation, do not send the signal.
-            sendSerial("r\n");
+            if (serialTarget == 0) {
+                sendSerial("r\n");
+            }
+            else if (serialTarget == 1) {
+                //sendSerial_pump();
+            }
         }
     }
 }

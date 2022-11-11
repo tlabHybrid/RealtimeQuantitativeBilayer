@@ -23,6 +23,7 @@
 #include <iostream>
 #include <time.h>
 #include <math.h>
+#include <windows.h>
 
 // Important variables
 int dataSource = 1;             // The source where the current is acquired from.  0: Amplifier, 1: Local ATF, 2: Local CSV
@@ -133,7 +134,7 @@ void MyMain::on_pushBtnClicked() {
     if (ui.radioButton_4->isChecked()) {
         // Perhaps in the future, this option will be changed to "Nanopores".
         displayInfo("Protein: Alpha hemolysin from Staphylococcus aureus");
-        conductance_user_specified = 0.89;  // [nS]
+        conductance_user_specified = 0.89;  // [nS] Journal data from [Tsuji et al., Analytical Chemistry 2013, 85, 10913-10919.]
         bias_voltage_user_specified = 50;   // [mV]
         ui.textBrowser_2->setEnabled(false);
         ui.textBrowser_3->setEnabled(false);
@@ -144,7 +145,7 @@ void MyMain::on_pushBtnClicked() {
     else if (ui.radioButton_5->isChecked()) {
         // Perhaps in the future, this option will be changed to "Ion channels" altogether with the below option.
         displayInfo("Protein: Big Potassium (BK) ion channel from Pig");
-        conductance_user_specified = 0.285;  // [nS]
+        conductance_user_specified = 0.299;  // [nS] Experimental data from Dr. Osaki
         ui.textBrowser_2->setEnabled(true);
         ui.textBrowser_3->setEnabled(true);
         ui.textBrowser_5->setEnabled(true);
@@ -330,7 +331,26 @@ void MyMain::on_pushBtn6Clicked() {
 
 // Function called when "Reload" button below the messagebox is pressed.
 void MyMain::on_pushBtn7Clicked() {
-    sendSerial("r\n");
+    if (serialTarget == 0) {
+        sendSerial("r\n");
+    }
+    else if (serialTarget == 1) {
+        //sendSerial_pump();
+    }
+}
+
+// Voltage changing functions.
+void MyMain::on_pushBtn10Clicked() {
+    ui.spinBox->setValue(+30);
+}
+void MyMain::on_pushBtn11Clicked() {
+    ui.spinBox->setValue(+60);
+}
+void MyMain::on_pushBtn12Clicked() {
+    ui.spinBox->setValue(-30);
+}
+void MyMain::on_pushBtn13Clicked() {
+    ui.spinBox->setValue(-60);
 }
 
 
@@ -585,8 +605,8 @@ void MyMain::update_graph_1Hz() {
         for (int idx = 0; idx < SAMPLE_FREQ; idx++) processedData[idx] = -1;
 
         const double threshold = 0.75;
-        const int rupture_threshold = 370;
-        const double nanopore_detection_threshold = 0.15;
+        const int rupture_threshold = 300;
+        const double nanopore_detection_threshold = 0.15;  // ~5 pA @ 50mV, 0.89 nS
         int maxOpenNumber = -1;
         double filteredData[SAMPLE_FREQ];
         if (rupture_flag) {
@@ -699,7 +719,7 @@ void MyMain::update_graph_1Hz() {
                 // (i.e. "Fix to the single channel" checkbox is checked)
                 // Under this assumption, we can additionally assume that the Faraday cage is open when the current > 30 pA.
                 // NOTE: This value is heuristic, and was obtained by observing the raw current.
-                double BKstimuliONE_threshold2 = 60;
+                double BKstimuliONE_threshold2 = 80;
                 if(BKstimuli == 1 && y_now > BKstimuliONE_threshold2) {
                     rupture_flag = true; 
                     stimuli_ALLaverage.clear();
@@ -745,9 +765,11 @@ void MyMain::update_graph_1Hz() {
                 recovery_flag = true;
             }
         }
-        if (proteinType == 0 && maxOpenNumber >= 2 && processedData[SAMPLE_FREQ - 1] == 0) { // Bug fixing
+        if (proteinType == 0 && maxOpenNumber >= 2) {
             rupture_flag = true;
-            recovery_flag = true;
+            if (processedData[SAMPLE_FREQ - 1] == 0) { // Bug fixing
+                recovery_flag = true;
+            }
         }
 
         // Baseline correction
@@ -910,6 +932,17 @@ void MyMain::update_graph_1Hz() {
                     stimuli = -26.0010643562768 + log(opProb / (1 - opProb)) / 0.0625493343322725;
                     stimuli_lower = -37.8402 + log(opProb / (1 - opProb)) / 0.076469;
                     stimuli_upper = -13.32 + log(opProb / (1 - opProb)) / 0.066644;
+                    
+                    // Value compensation: the estimated value is usually different to the actual value
+                    // V_estimated [mV] = 0.7096 * V_actual [mV] - 16.877
+                    // V_actual = (V_estimated + 16.877) / 0.7096
+                    // [Autoer's note] This compensation is just temporary, and we didn't use it in the journal.
+                    // Increasing the number of measured lipid bilayers will enhance the accuracy.
+                    
+                    //stimuli = (stimuli + 16.877) / 0.7096;
+                    //stimuli_lower = (stimuli_lower + 16.877) / 0.7096;
+                    //stimuli_upper = (stimuli_upper + 16.877) / 0.7096;
+                    
                     stimuli_ALLaverage.append(stimuli);
                     double sum = 0;
                     for (int i = 0; i < stimuli_ALLaverage.size(); i++) sum += stimuli_ALLaverage.at(i);
@@ -1044,9 +1077,9 @@ void MyMain::update_graph_1Hz() {
                             if (one_value - zero_value > current_per_channel * 1.9 || one_value - zero_value < current_per_channel * 0.1) continue;
 
                             // Graph plotting
-                            double tmpx[] = { currentTime[zero_start_idx], currentTime[zero_start_idx], currentTime[one_end_idx], currentTime[one_end_idx] };
-                            double tmpy[] = { 0, 500, 500, 0 };
-                            for (int i = 0; i < 4; i++) ui.customPlot->graph(1)->addData(tmpx[i], tmpy[i]);
+                            //double tmpx[] = { currentTime[zero_start_idx], currentTime[zero_start_idx], currentTime[one_end_idx], currentTime[one_end_idx] };
+                            //double tmpy[] = { 0, 500, 500, 0 };
+                            //for (int i = 0; i < 4; i++) ui.customPlot->graph(1)->addData(tmpx[i], tmpy[i]);
 
                             // CSV export after converting the current [pA] into conductance [pS] using heuristic knowledge of the bias voltage (50 [mV])
                             double one_conductance = (one_value - zero_value) * 1000 / 50;
@@ -1157,6 +1190,7 @@ void MyMain::update_graph_1Hz() {
             }
         }
         ui.customPlot->replot();
+        //Sleep(300);
         ui.customPlot_2->replot();
         
 
@@ -1175,12 +1209,36 @@ void MyMain::update_graph_1Hz() {
                     ui.textBrowser_2->setAlignment(Qt::AlignCenter);
                     ui.textBrowser_5->setText(QString::fromLocal8Bit("X"));
                     ui.textBrowser_5->setAlignment(Qt::AlignCenter);
+                    sendSerial("0\n");
                 }
                 else {
                     ui.textBrowser_2->setText(QString::fromLocal8Bit(std::to_string(int(opProb * 100)).c_str()));
                     ui.textBrowser_2->setAlignment(Qt::AlignCenter);
                     ui.textBrowser_5->setText(QString::fromLocal8Bit(std::to_string(int(round(stimuli))).c_str()));
                     ui.textBrowser_5->setAlignment(Qt::AlignCenter);
+
+                    // Send speed control signal toward Arduino
+                    if (BKstimuli == 0) {
+                        // voltage addition (stimuli: -100 mV ~ +100 mV)
+                        if (stimuli < -80) sendSerial("9\n");
+                        else if (stimuli < -60) sendSerial("8\n");
+                        else if (stimuli < -40) sendSerial("7\n");
+                        else if (stimuli < -20) sendSerial("6\n");
+                        else if (stimuli < 0) sendSerial("5\n");
+                        else if (stimuli < 10) sendSerial("4\n");
+                        else if (stimuli < 20) sendSerial("3\n");
+                        else if (stimuli < 30) sendSerial("2\n");
+                        else sendSerial("1\n");
+                    }
+                    else if (BKstimuli == 1) {
+                        // verapamil addition (stimuli: 0 uM ~ 20 uM)
+                        if (stimuli < 1) sendSerial("0\n");
+                        else if (stimuli < 4) sendSerial("1\n");
+                        else if (stimuli < 8) sendSerial("2\n");
+                        else if (stimuli < 12) sendSerial("3\n");
+                        else if (stimuli < 16) sendSerial("4\n");
+                        else sendSerial("5\n");
+                    }
                 }
                 break;
             case 2:

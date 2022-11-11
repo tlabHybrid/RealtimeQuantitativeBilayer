@@ -24,6 +24,8 @@ void convolve_EDGE(double* X, double* Y, double* prevX, int prevX_size);
 // qcustomserial.cpp //
 void setupSerial(MyMain* mainwindow);
 void sendSerial(const char*);
+void sendSerial_pump();
 void closeSerial();
+extern int serialTarget;
 // ActuationSerial.cpp //
 void conductActuationSerial(bool rupture_flag, bool recovery_flag, int number_of_channel);
