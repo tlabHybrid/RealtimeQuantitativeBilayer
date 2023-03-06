@@ -2,7 +2,7 @@
 This repository contains a software for the research article of [Real-time quantitative characterization of ion channel activities for automated control of a lipid bilayer system](https://www.journals.elsevier.com/biosensors-and-bioelectronics/forthcoming-special-issues/crossing-the-laboratory-borders-volume-i-health-biosensors-and-diagnostic-tools-from-the-lab-to-the-fab).
 
 ## What is this?
-This is a toolkit for lipid bilayer researchers, providing them with the in-situ current acquisition and the subsequent analysis & response. Therefore, the researchers can introduce the notion of "automated control" into lipid bilayer experiments. 
+This is a toolkit software for lipid bilayer researchers, providing them with the in-situ current acquisition and the subsequent analysis & response. Therefore, the researchers can introduce the notion of "automated control" into lipid bilayer experiments. 
 
 ## Currently applicable to:
 - [x]  Real-time and in-situ estimation of the applied physiological stimuli (e.g. membrane potential) from the gating current and the corresponding open probability of ion channels (e.g. big-potassium channel), for the real-time sensing applications.
