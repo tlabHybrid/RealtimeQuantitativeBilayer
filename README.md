@@ -108,5 +108,5 @@ If you want to use the software without Visual Studio (e.g. other user's PC), de
 # About a licence
 This software is open-source except manufacturer's API/DLLs, so you can freely modify this application to meet your demands. Although not obligatory, we would really appreciate if you cite the following paper.
 
-[Real-time quantitative characterization of ion channel activities for automated control of a lipid bilayer system](https://www.journals.elsevier.com/biosensors-and-bioelectronics/forthcoming-special-issues/crossing-the-laboratory-borders-volume-i-health-biosensors-and-diagnostic-tools-from-the-lab-to-the-fab)
+Kazuto Ogishi, Toshihisa Osaki, Hisatoshi Mimura, Izumi Hashimoto, Yuya Morimoto, Norihisa Miki, and Shoji Takeuchi, [Real-time quantitative characterization of ion channel activities for automated control of a lipid bilayer system](https://www.journals.elsevier.com/biosensors-and-bioelectronics/forthcoming-special-issues/crossing-the-laboratory-borders-volume-i-health-biosensors-and-diagnostic-tools-from-the-lab-to-the-fab), The special issue “Crossing the laboratory borders. Volume I – Health: biosensors and diagnostic tools from the lab to the fab” of the journal “Biosensors and Bioelectronics”, 2023, Submitted. 
 
